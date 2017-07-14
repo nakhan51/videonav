@@ -3,7 +3,7 @@ import numpy as np
 import time
 
 # Create a VideoCapture object and read from input file
-cap = cv2.VideoCapture('output_crop.avi')
+cap = cv2.VideoCapture('log/videos/output_crop.avi')
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
@@ -18,7 +18,7 @@ frame_rate=int(round(cap.get(cv2.cv.CV_CAP_PROP_FPS)))
 
 # Define the codec and create VideoWriter object.The output is stored in 'output.avi' file.
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter('output_crop_detect.avi',fourcc, 20, (frame_width,frame_height))
+out = cv2.VideoWriter('videos/output_crop_detect.avi',fourcc, 20, (frame_width,frame_height))
 
 # Read until video is completed
 while(cap.isOpened()):
