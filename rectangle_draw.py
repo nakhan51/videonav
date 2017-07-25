@@ -48,16 +48,6 @@ def detectcircle(image):
 
 
 
-#img = cv2.imread('extra/pitch_frame/frame15.jpg')
-#filenames = [i for i in glob.glob("sensor_video/frame/*.jpg")]
-#filenames.sort() # ADD THIS LINE
-
-
-
-
-
-
-
 
 cap = cv2.VideoCapture("sensor_video/text_with_sensor.avi")
 
@@ -87,7 +77,7 @@ for row in lines:
     roll.append(float(columns[3]))
     azimuth.append(float(columns[4]))
 #print pitch,roll,azimuth
-
+#print min(pitch),max(pitch),min(azimuth),max(azimuth)
 count=0
 detect=False
 while(cap.isOpened()):
@@ -123,42 +113,49 @@ while(cap.isOpened()):
          draw=True
 
    if detect == True and draw == True:
-      x1=x1-50
-      y1=y1-50
-      x2=x2+50
-      y2=y2+50
+      x1=x1-80
+      y1=y1-80
+      x2=x2+80
+      y2=y2+80
       cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
       out.write(org_image)
+      ref_pitch=pitch[count]
+      ref_azimuth=azimuth[count]
       count +=1
       draw=False
 
+   a=0
+   p=0.5
    if draw == False:
-      diff_pitch=pitch[count]-pitch[count-1]
-      diff_azimuth=azimuth[count]-azimuth[count-1]
+      diff_pitch=pitch[count]-ref_pitch
+      diff_azimuth=azimuth[count]-ref_azimuth
+      print count,diff_pitch,diff_azimuth,x1,y1,x2,y2
       if diff_pitch > 0 and diff_azimuth > 0:
-         x1=x1-diff_azimuth*30
-         y1=y1-diff_pitch*21
-         x2=x2-diff_azimuth*30
-         y2=y2-diff_pitch*21
-         cv2.rectangle(org_image,(int(x1),int(y1)), (int(x2),int(y2)),(255,255,255),3)
+         x1=x1-abs(diff_azimuth)*a
+         y1=y1-abs(diff_pitch)*p
+         x2=x2-abs(diff_azimuth)*a
+         y2=y2-abs(diff_pitch)*p
       elif diff_pitch > 0 and diff_azimuth < 0:
-         x1=x1+diff_azimuth*30
-         y1=y1-diff_pitch*21
-         x2=x2+diff_azimuth*30
-         y2=y2-diff_pitch*21
-         cv2.rectangle(org_image,(int(x1),int(y1)), (int(x2),int(y2)),(255,255,255),3)
+         x1=x1+abs(diff_azimuth)*a
+         y1=y1-abs(diff_pitch)*p
+         x2=x2+abs(diff_azimuth)*a
+         y2=y2-abs(diff_pitch)*p  
       elif diff_pitch < 0 and diff_azimuth < 0:
-         x1=x1+diff_azimuth*30
-         y1=y1+diff_pitch*21
-         x2=x2+diff_azimuth*30
-         y2=y2+diff_pitch*21
-         cv2.rectangle(org_image,(int(x1),int(y1)), (int(x2),int(y2)),(255,255,255),3)
+         x1=x1+abs(diff_azimuth)*a
+         y1=y1+abs(diff_pitch)*p
+         x2=x2+abs(diff_azimuth)*a
+         y2=y2+abs(diff_pitch)*p   
       elif diff_pitch < 0 and diff_azimuth > 0:
-         x1=x1-diff_azimuth*30
-         y1=y1+diff_pitch*21
-         x2=x2-diff_azimuth*30
-         y2=y2+diff_pitch*21
-         cv2.rectangle(org_image,(int(x1),int(y1)), (int(x2),int(y2)),(255,255,255),3)
+         x1=x1-abs(diff_azimuth)*a
+         y1=y1+abs(diff_pitch)*p
+         x2=x2-abs(diff_azimuth)*a
+         y2=y2+abs(diff_pitch)*p
+
+      x1=max(0,x1)
+      x2=min(x2,1920)
+      y1=max(0,y1)
+      y2=min(y2,1080)
+      cv2.rectangle(org_image,(int(x1),int(y1)), (int(x2),int(y2)),(255,255,255),3)
       out.write(org_image)
       count +=1
          

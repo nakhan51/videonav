@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import sys
 
-def interpolator(upper,lower,sensortime,presensortime):
+def interpolator(upper,lower,sensortime,presensortime,frametime):
     slope=(upper-lower)/(sensortime-presensortime)
     sensor_new= lower+slope*(frametime-presensortime)
     return sensor_new 
@@ -50,23 +50,28 @@ for i in range(0,len(frametimestamp)):
     while(flag):
         sensortime=sensortimestamp[j]
         #print sensortime,frametime
-        if sensortime > frametime and j>0:
-            u_pitch=pitch[j]
-            l_pitch=pitch[j-1]
-            u_roll=roll[j]
-            l_roll=roll[j-1]
-            u_yaw=yaw[j]
-            l_yaw=yaw[j-1]
-            presensortime=sensortimestamp[j-1]
-            pitch_new=interpolator(u_pitch,l_pitch,sensortime,presensortime)
-            roll_new=interpolator(u_roll,l_roll,sensortime,presensortime)
-            azimuth_new=interpolator(u_yaw,l_yaw,sensortime,presensortime)
-            flag=False
-        else:
-            pitch_new=pitch[j]
+        if sensortime > frametime:
+            if (j-1)<0:
+                pitch_new=pitch[j]
+                roll_new=roll[j]
+                azimuth_new=yaw[j]
+                flag=False
+            else:
+                u_pitch=pitch[j]
+                l_pitch=pitch[j-1]
+                u_roll=roll[j]
+                l_roll=roll[j-1]
+                u_yaw=yaw[j]
+                l_yaw=yaw[j-1]
+                presensortime=sensortimestamp[j-1]
+                pitch_new=interpolator(u_pitch,l_pitch,sensortime,presensortime,frametime)
+                roll_new=interpolator(u_roll,l_roll,sensortime,presensortime,frametime)
+                azimuth_new=interpolator(u_yaw,l_yaw,sensortime,presensortime,frametime)
+                flag=False
+        
         j+=1
     
-    print frameno[i],frametimestamp[i],pitch_new,roll_new,azimuth_new
+    print frameno[i],frametimestamp[i],pitch_new,roll_new,azimuth_new,frametime
     
     i+=1
             
