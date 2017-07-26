@@ -46,7 +46,20 @@ def detectcircle(image):
    return circles
 
 
+def drawrectangle(top,ref,mini,maxi,diff,flag):
+   if flag ==1:
+      if diff > 0:
+         new= top+((0-top)/(maxi-ref))*diff
+      else:
+         new=top+((top-1080)/(ref-mini))*diff
 
+   else:
+      if diff < 0:
+         new=top+((top-0)/(ref-maxi))*diff
+      else:   
+         new=top+((top-1920)/(ref-mini))*diff
+
+   return new
 
 
 cap = cv2.VideoCapture("sensor_video/text_with_sensor.avi")
@@ -61,7 +74,7 @@ frame_rate=int(cap.get(cv2.cv.CV_CAP_PROP_FPS ))
 #print frame_rate
 
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter("sensor_video/rectangle.avi",fourcc, 10, (frame_width,frame_height))
+out = cv2.VideoWriter("sensor_video/rectangle.avi",fourcc, frame_rate, (frame_width,frame_height))
 
 new_file= "sensor_video/sync.txt" 
 f = open(new_file, "r")
@@ -76,8 +89,11 @@ for row in lines:
     pitch.append(float(columns[2]))
     roll.append(float(columns[3]))
     azimuth.append(float(columns[4]))
-#print pitch,roll,azimuth
-#print min(pitch),max(pitch),min(azimuth),max(azimuth)
+pitch_min=min(pitch)
+pitch_max=max(pitch)
+azimuth_min=min(azimuth)
+azimuth_max=max(azimuth)
+
 count=0
 detect=False
 while(cap.isOpened()):
@@ -110,54 +126,40 @@ while(cap.isOpened()):
          x2= int(round(x[len(x)-1]))
          y2= int(round(y[len(y)-1]))
          detect=True
-         draw=True
+         firstdraw=True
 
-   if detect == True and draw == True:
+   if detect == True and firstdraw == True:
       x1=x1-80
       y1=y1-80
       x2=x2+80
       y2=y2+80
+      h=y2-y1
+      w=x2-x1
       cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
       out.write(org_image)
       ref_pitch=pitch[count]
       ref_azimuth=azimuth[count]
-      count +=1
-      draw=False
 
-   a=0
-   p=0.5
-   if draw == False:
+
+   if firstdraw == False:
       diff_pitch=pitch[count]-ref_pitch
       diff_azimuth=azimuth[count]-ref_azimuth
-      print count,diff_pitch,diff_azimuth,x1,y1,x2,y2
-      if diff_pitch > 0 and diff_azimuth > 0:
-         x1=x1-abs(diff_azimuth)*a
-         y1=y1-abs(diff_pitch)*p
-         x2=x2-abs(diff_azimuth)*a
-         y2=y2-abs(diff_pitch)*p
-      elif diff_pitch > 0 and diff_azimuth < 0:
-         x1=x1+abs(diff_azimuth)*a
-         y1=y1-abs(diff_pitch)*p
-         x2=x2+abs(diff_azimuth)*a
-         y2=y2-abs(diff_pitch)*p  
-      elif diff_pitch < 0 and diff_azimuth < 0:
-         x1=x1+abs(diff_azimuth)*a
-         y1=y1+abs(diff_pitch)*p
-         x2=x2+abs(diff_azimuth)*a
-         y2=y2+abs(diff_pitch)*p   
-      elif diff_pitch < 0 and diff_azimuth > 0:
-         x1=x1-abs(diff_azimuth)*a
-         y1=y1+abs(diff_pitch)*p
-         x2=x2-abs(diff_azimuth)*a
-         y2=y2+abs(diff_pitch)*p
+      x1_n=drawrectangle(x1,ref_azimuth,azimuth_min,azimuth_max,diff_azimuth,0)
+      y1_n=drawrectangle(y1,ref_pitch,pitch_min,pitch_max,diff_pitch,1)
+      x2_n=x1_n+w
+      y2_n=y1_n+h
+      
 
-      x1=max(0,x1)
-      x2=min(x2,1920)
-      y1=max(0,y1)
-      y2=min(y2,1080)
-      cv2.rectangle(org_image,(int(x1),int(y1)), (int(x2),int(y2)),(255,255,255),3)
+      x1_n=max(0,x1_n)
+      x2_n=min(x2_n,1920)
+      y1_n=max(0,y1_n)
+      y2_n=min(y2_n,1080)
+      print count,diff_pitch,diff_azimuth,x1_n,y1_n,x2_n,y2_n
+
+      cv2.rectangle(org_image,(int(x1_n),int(y1_n)), (int(x2_n),int(y2_n)),(255,255,255),3)
       out.write(org_image)
-      count +=1
+   firstdraw=False
+   count +=1
          
    if cv2.waitKey(25) & 0xFF == ord('q'):# Press Q on keyboard to  exit
       break

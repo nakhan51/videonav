@@ -6,13 +6,13 @@ import numpy as np
 # whether cropping is being performed or not
 refPt = []
 annotation = False
-overall_rec=[]
 
-new_file=('annotation.csv')
+
+new_file=('annotation3.csv')
 
 f = open(new_file, "wt")
 writer=csv.writer(f)
-writer.writerow( ('no_of_circles','bounding_box_position','color') )
+writer.writerow( ('frameno','no_of_circles','bounding_box_position','color') )
 
 
 def click_and_annotate(event, x, y, flags, param):
@@ -39,42 +39,55 @@ def click_and_annotate(event, x, y, flags, param):
 
 
 
+#image = cv2.imread('sensor_video/frame/frame15.jpg')
+cap = cv2.VideoCapture("sensor_video/output_sensor.avi")
 
+# Check if camera opened successfully
+if (cap.isOpened()== False): 
+	print("Error opening video stream or file")
 
-# load the image, clone it, and setup the mouse callback function
-image = cv2.imread('sensor_video/frame/frame15.jpg')
-clone = image.copy()
-cv2.namedWindow("image")
-cv2.setMouseCallback("image", click_and_annotate)
+count=0
+while(cap.isOpened()):
+        overall_rec=[]
+        ret, image = cap.read()
+        if ret==False:
+                break
+
+        if count > 636:
+                clone = image.copy()
+                cv2.namedWindow("image")
+                cv2.setMouseCallback("image", click_and_annotate)
  
-# keep looping until the 'q' key is pressed
-while True:
-	# display the image and wait for a keypress
-	cv2.imshow("image", image)
-	key = cv2.waitKey(1) & 0xFF
+                # keep looping until the 'q' key is pressed
+                while True:
+	                # display the image and wait for a keypress
+	                cv2.imshow("image", image)
+	                key = cv2.waitKey(1) & 0xFF
  
-	# if the 'r' key is pressed, make flag red
-	if key == ord("r"):
-	    flag=0
+	                # if the 'r' key is pressed, make flag red
+	                if key == ord("r"):
+	                        flag=0
             
-        # if the 'g' key is pressed, make flag green
-	elif key == ord("g"):
-	    flag=1
+                        # if the 'g' key is pressed, make flag green
+	                elif key == ord("g"):
+	                        flag=1
             
-        # if the 's' key is pressed, reset the coordinate
-	elif key == ord("s"):
-	    image = clone.copy()
+                        # if the 's' key is pressed, reset the coordinate
+	                elif key == ord("s"):
+	                        image = clone.copy()
  
-	# if the 'c' key is pressed, break from the loop
-	elif key == ord("c"):
-            overall_rec.append(refPt)
-        elif key == ord("n"):
-            break
+	                # if the 'c' key is pressed, break from the loop
+	                elif key == ord("c"):
+                                overall_rec.append(refPt)
+                        elif key == ord("n"):
+                                break
  
-# if there are two reference points, then crop the region of interest
-# from teh image and display it
-no_circle=len(overall_rec)
-writer.writerow((no_circle,overall_rec,flag))
- 
+                # if there are two reference points, then crop the region of interest
+                # from teh image and display it
+                no_circle=len(overall_rec)
+                writer.writerow((count,no_circle,overall_rec,flag))
+        count +=1
 # close all open windows
+cap.release()
+f.close()
 cv2.destroyAllWindows()
