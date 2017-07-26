@@ -74,7 +74,7 @@ frame_rate=int(cap.get(cv2.cv.CV_CAP_PROP_FPS ))
 #print frame_rate
 
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter("sensor_video/cropanddetect.avi",fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter("sensor_video/cropanddetect2.avi",fourcc, frame_rate, (frame_width,frame_height))
 
 new_file= "sensor_video/sync.txt" 
 f = open(new_file, "r")
@@ -211,4 +211,3 @@ cap.release()
 f.close()
 out.release()
 cv2.destroyAllWindows()
-
