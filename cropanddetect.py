@@ -184,15 +184,33 @@ while(cap.isOpened()):
 
       print x1_n,y1_n,x2_n,y2_n
 
+      x1ratio=x1_n
+      x2ration=x2_n
+      y1ratio=y1_n
+      y2ratio=y2_n
+      
       circles_red,_=scanarea(x1_n,x2_n,y1_n,y2_n,org_image)
       
       cv2.rectangle(org_image,(x1_n,y1_n), (x2_n,y2_n),(255,255,255),3)        
         
+      # while(circles_red is None):
+      #    newx1=max(0,x1_n*2)
+      #    newx2=min(1920,x2_n*2)
+      #    newy1=max(0,y1_n*2)
+      #    newy2=min(1080,y2_n*2)
+      #    circles_red,_=scanarea(newx1,newx2,newy1,newy2,org_image)
+      #    if circles_red is not None:
+      #       x1ratio=newx1
+      #       x2ratio=newx2
+      #       y1ratio=newy1
+      #       y2ratio=newy2
+      #       break
+
       if circles_red is not None:
          for circles in circles_red[0]:
             [x_c,y_c,r]=circles
-            x_c=int(x_c+x1_n)
-            y_c=int(y_c+y1_n)
+            x_c=int(x_c+x1ratio)
+            y_c=int(y_c+y1ratio)
             cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
             cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
             cv2.putText(org_image,"red don't go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
