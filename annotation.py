@@ -8,7 +8,7 @@ refPt = []
 annotation = False
 
 
-new_file=('annotation3.csv')
+new_file=('annotation7.csv')
 
 f = open(new_file, "wt")
 writer=csv.writer(f)
@@ -53,7 +53,7 @@ while(cap.isOpened()):
         if ret==False:
                 break
 
-        if count > 636:
+        if count > 835:
                 clone = image.copy()
                 cv2.namedWindow("image")
                 cv2.setMouseCallback("image", click_and_annotate)

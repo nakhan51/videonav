@@ -46,21 +46,36 @@ def detectcircle(image):
    return circles
 
 
-def drawrectangle(top,ref,mini,maxi,diff,flag):
-   if flag ==1:
-      if diff > 0:
-         new= top+((0-top)/(maxi-ref))*diff
-      else:
-         new=top+((top-1080)/(ref-mini))*diff
-
+def drawrectangle(x1,y1,refp,minip,maxip,diffp,refa,minia,maxia,diffa,w,h):
+   if diffp > 0:
+      y1n= y1+((0-y1)/(maxip-refp))*diffp
    else:
-      if diff < 0:
-         new=top+((top-0)/(ref-maxi))*diff
-      else:   
-         new=top+((top-1920)/(ref-mini))*diff
+      y1n=y1+((y1-1080)/(refp-minip))*diffp
 
-   return new
+   if diffa <= 0:
+      x1n=x1+((x1-0)/(refa-maxia))*diffa
+   else:   
+      x1n=x1+((x1-1920)/(refa-minia))*diffa
 
+   x2n=x1n+w
+   y2n=y1n+h
+   x1n=int(max(0,x1n))
+   x2n=int(min(x2n,1920))
+   y1n=int(max(0,y1n))
+   y2n=int(min(y2n,1080))
+
+   if x2n-x1n<100:
+      if x1n==0:
+         x2n=x2n+100
+      if x2n==1920:
+         x1n=x1n-100
+   if y2n-y1n<100:
+      if y1n==0:
+         y2n=y2n+100
+      if y2n==1080:
+         y1n=y1n-100
+    
+   return x1n,x2n,y1n,y2n
 
 cap = cv2.VideoCapture("sensor_video/text_with_sensor.avi")
 
@@ -129,10 +144,10 @@ while(cap.isOpened()):
          firstdraw=True
 
    if detect == True and firstdraw == True:
-      x1=x1-80
-      y1=y1-80
-      x2=x2+80
-      y2=y2+80
+      x1=x1-120
+      y1=y1-120
+      x2=x2+120
+      y2=y2+120
       h=y2-y1
       w=x2-x1
       cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
@@ -144,17 +159,8 @@ while(cap.isOpened()):
    if firstdraw == False:
       diff_pitch=pitch[count]-ref_pitch
       diff_azimuth=azimuth[count]-ref_azimuth
-      x1_n=drawrectangle(x1,ref_azimuth,azimuth_min,azimuth_max,diff_azimuth,0)
-      y1_n=drawrectangle(y1,ref_pitch,pitch_min,pitch_max,diff_pitch,1)
-      x2_n=x1_n+w
-      y2_n=y1_n+h
-      
-
-      x1_n=max(0,x1_n)
-      x2_n=min(x2_n,1920)
-      y1_n=max(0,y1_n)
-      y2_n=min(y2_n,1080)
-      print count,diff_pitch,diff_azimuth,x1_n,y1_n,x2_n,y2_n
+      x1_n,x2_n,y1_n,y2_n=drawrectangle(x1,y1,ref_pitch,pitch_min,pitch_max,diff_pitch,ref_azimuth,azimuth_min,azimuth_max,diff_azimuth,w,h)
+      #print count,diff_pitch,diff_azimuth,x1_n,y1_n,x2_n,y2_n
 
       cv2.rectangle(org_image,(int(x1_n),int(y1_n)), (int(x2_n),int(y2_n)),(255,255,255),3)
       out.write(org_image)
