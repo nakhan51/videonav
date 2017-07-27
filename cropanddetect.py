@@ -201,10 +201,10 @@ azimuth_max=max(azimuth)
 
 
 
-write_file=('finaldata.csv')
+write_file=('finaldata.txt')
 
 g = open(write_file, "wt")
-header="frameno red_count green_count red_pos green_pos"
+header="frameno red_count green_count red_pos green_pos\n"
 g.write(header)
 
 is_first_frame=True
@@ -282,7 +282,6 @@ while(cap.isOpened()):
 
    out_str=str(frame_no)+" "+str(len_red)+" "+str(len_green)+" \""+str(circle_red_position)+"\" \""+str(circle_green_position)+"\"\n"
    g.write(out_str)
-   print out_str
 
    out.write(org_image)
    frame_no +=1
