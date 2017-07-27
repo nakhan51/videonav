@@ -1,13 +1,16 @@
 import cv2
 import numpy as np
-import glob
+import csv
 import math
 
-RECTANGLE_INIT_SIZE=100
-SCAN_INCREMENT=150
+RECTANGLE_INIT_SIZE=120
+SCAN_INCREMENT_WIDTH=100
+SCAN_INCREMENT_HEIGHT=120
 MAX_HEIGHT=100
 MAX_WIDTH=100
 HISTORY_SIZE=10
+FACTOR=1.5
+REC_AREA=1920*1080
 
 
 def colordetection(hsvimage,flag):
@@ -40,29 +43,29 @@ def drawrectangle(x1,y1,refp,minip,maxip,diffp,refa,minia,maxia,diffa,w,h):
    if diffp > 0:
       y1n= y1+((0-y1)/(maxip-refp))*diffp
    else:
-      y1n=y1+((y1-1080)/(refp-minip))*diffp
+      y1n=y1+((y1-frame_height)/(refp-minip))*diffp
 
    if diffa <= 0:
       x1n=x1+((x1-0)/(refa-maxia))*diffa
    else:   
-      x1n=x1+((x1-1920)/(refa-minia))*diffa
+      x1n=x1+((x1-frame_width)/(refa-minia))*diffa
 
    x2n=x1n+w
    y2n=y1n+h
    x1n=int(max(0,x1n))
-   x2n=int(min(x2n,1920))
+   x2n=int(min(x2n,frame_width))
    y1n=int(max(0,y1n))
-   y2n=int(min(y2n,1080))
+   y2n=int(min(y2n,frame_height))
 
    if x2n-x1n < MAX_WIDTH:
       if x1n == 0:
          x2n = x2n+MAX_WIDTH
-      if x2n == 1920:
+      if x2n == frame_width:
          x1n = x1n-MAX_WIDTH
    if y2n-y1n < MAX_HEIGHT:
       if y1n == 0:
          y2n = y2n+MAX_HEIGHT
-      if y2n == 1080:
+      if y2n == frame_height:
          y1n = y1n-MAX_HEIGHT
     
    return x1n,x2n,y1n,y2n
@@ -141,7 +144,28 @@ def process_frame(org_image):
 
    return circles_red, circles_green
 
-   
+def finaldata(circles_red,circles_green):
+   circle_red_position=[]
+   circle_green_position=[]
+
+   len_red=len_green=0
+   if circles_red is not None:
+      len_red=len(circles_red[0])
+      for circles in circles_red[0]:
+         [x_c,y_c,r]=circles
+         circle_red_position.append((x_c,y_c))
+
+   if circles_green is not None:
+      len_green=len(circles_green[0])
+      for circles in circles_green[0]:
+         [x_c,y_c,r]=circles
+         circle_green_position.append((x_c,y_c))
+
+   return len_red,len_green,circle_red_position,circle_green_position
+
+
+## START OF MAIN FUNCTION
+
 cap = cv2.VideoCapture("sensor_video/text_with_sensor.avi")
 
 # Check if camera opened successfully
@@ -152,8 +176,9 @@ frame_width = int(cap.get(3))
 frame_height = int(cap.get(4))
 frame_rate=int(round(cap.get(cv2.cv.CV_CAP_PROP_FPS )))
 
+
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter("sensor_video/cropanddetect2.avi",fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter("sensor_video/cropanddetect3.avi",fourcc, frame_rate, (frame_width,frame_height))
 
 new_file= "sensor_video/sync.txt" 
 f = open(new_file, "r")
@@ -174,6 +199,14 @@ pitch_max=max(pitch)
 azimuth_min=min(azimuth)
 azimuth_max=max(azimuth)
 
+
+
+write_file=('finaldata.csv')
+
+g = open(write_file, "wt")
+writer=csv.writer(g)
+writer.writerow( ('frameno', 'no_of_red_circles', 'no_of_green_circles', 'circle_red_position', 'circle_green_position') )
+
 is_first_frame=True
 
 
@@ -193,6 +226,7 @@ while(cap.isOpened()):
          x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          org_image=draw_circles(circles_red,circles_green,org_image,0,0)
          cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
+         len_red,len_green,circle_red_position,circle_green_position=finaldata(circles_red,circles_green)
          is_first_frame=False
 
    else:
@@ -200,44 +234,53 @@ while(cap.isOpened()):
       diff_azimuth=azimuth[frame_no]-ref_azimuth
       x1_n,x2_n,y1_n,y2_n=drawrectangle(x1,y1,ref_pitch,pitch_min,pitch_max,diff_pitch,ref_azimuth,azimuth_min,azimuth_max,diff_azimuth,w,h)
 
-      print x1_n,y1_n,x2_n,y2_n
+      #print x1_n,y1_n,x2_n,y2_n
 
       i=0
       while True:
          img=org_image[y1_n:y2_n,x1_n:x2_n]
          circles_red,circles_green=process_frame(img)
 
-         print circles_red,circles_green
+         #print circles_red,circles_green
          if (circles_red is None and circles_green is None): # no cicles currently, so we need to search larger area
-            x1_n = max(0, x1_n-SCAN_INCREMENT)
-            y1_n = max(0, y1_n-SCAN_INCREMENT)
-            x2_n = min(1920, x2_n+SCAN_INCREMENT)
-            y2_n = min(1080, y2_n+SCAN_INCREMENT)
+            if i>1:
+               x1_n=int(max(0,x1_n-SCAN_INCREMENT_WIDTH*FACTOR))
+               y1_n=int(max(0,y1_n-SCAN_INCREMENT_HEIGHT*FACTOR))
+               x2_n=int(min(frame_width, x2_n+SCAN_INCREMENT_WIDTH*FACTOR))
+               y2_n=int(min(frame_height, y2_n+SCAN_INCREMENT_HEIGHT*FACTOR))
+            else:
+               x1_n = max(0, x1_n-SCAN_INCREMENT_WIDTH)
+               y1_n = max(0, y1_n-SCAN_INCREMENT_HEIGHT)
+               x2_n = min(frame_width, x2_n+SCAN_INCREMENT_WIDTH)
+               y2_n = min(frame_height, y2_n+SCAN_INCREMENT_HEIGHT)
             i +=1
             
          else: # either red or green is detected            
             cv2.rectangle(org_image,(x1_n,y1_n), (x2_n,y2_n),(255,255,255),3)
             break
-         if i==2: #TODO: remote this. check if current rectangle >= frame_size
+         if ((x2_n-x1_n)*(y2_n-y1_n)==REC_AREA): #TODO: remote this. check if current rectangle >= frame_size
             break
          
       if (circles_red is not None or circles_green is not None):
-         if(i>0): # rectangle was increased for search, so need to update reference.
-            x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
+         # len_red=len_green=0
+         # if circles_red is not None:
+         #    len_red=len(circles_red[0])
+
+         # if circles_green is not None:
+         #    len_green=len(circles_green[0])
+
+         # max_val=max(len_red, len_green)
+         # #circle_count_history.append(max_val)
+            
+         # #avg_circle_count=int(math.ceil(sum(circle_count_history[-HISTORY_SIZE:])/float(len(circle_count_history[-HISTORY_SIZE:]))))
+
+         # if(i>0 and max_val>=2): # rectangle was increased for search, so need to update reference.
+         #    x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          
          org_image=draw_circles(circles_red,circles_green,org_image,x1_n,y1_n)
+         len_red,len_green,circle_red_position,circle_green_position=finaldata(circles_red,circles_green)
 
-         len_red=len_green=0
-         if circles_red is not None:
-            len_red=len(circles_red[0])
-
-         if circles_green is not None:
-            len_green=len(circles_green[0])
-            
-         circle_count_history.append(max(len_red, len_green))
-         print "history", circle_count_history[-HISTORY_SIZE:], \
-            int(math.ceil(sum(circle_count_history[-HISTORY_SIZE:])/float(len(circle_count_history[-HISTORY_SIZE:]))))
-
+   writer.writerow((frame_no, len_red, len_green, circle_red_position, circle_green_position))
 
    out.write(org_image)
    frame_no +=1
@@ -247,6 +290,7 @@ while(cap.isOpened()):
 
 cap.release()
 f.close()
+g.close()
 out.release()
 cv2.destroyAllWindows()
 
