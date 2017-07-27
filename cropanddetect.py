@@ -5,6 +5,8 @@ import math
 
 RECTANGLE_INIT_SIZE=100
 SCAN_INCREMENT=150
+MAX_HEIGHT=100
+MAX_WIDTH=100
 
 
 def colordetection(hsvimage,flag):
@@ -51,41 +53,40 @@ def drawrectangle(x1,y1,refp,minip,maxip,diffp,refa,minia,maxia,diffa,w,h):
    y1n=int(max(0,y1n))
    y2n=int(min(y2n,1080))
 
-   if x2n-x1n<100:
-      if x1n==0:
-         x2n=x2n+100
-      if x2n==1920:
-         x1n=x1n-100
-   if y2n-y1n<100:
-      if y1n==0:
-         y2n=y2n+100
-      if y2n==1080:
-         y1n=y1n-100
+   if x2n-x1n < MAX_WIDTH:
+      if x1n == 0:
+         x2n = x2n+MAX_WIDTH
+      if x2n == 1920:
+         x1n = x1n-MAX_WIDTH
+   if y2n-y1n < MAX_HEIGHT:
+      if y1n == 0:
+         y2n = y2n+MAX_HEIGHT
+      if y2n == 1080:
+         y1n = y1n-MAX_HEIGHT
     
    return x1n,x2n,y1n,y2n
 
-def scanarea(x1_n,x2_n,y1_n,y2_n,org_image):
-   img=org_image[y1_n:y2_n,x1_n:x2_n]
 
-   image=cv2.medianBlur(img,3)
-   hsvimage=cv2.cvtColor(image,cv2.COLOR_BGR2HSV);# Convert input image to HSV
-        
-   red_hue_image=colordetection(hsvimage,0)
-   circles_red=detectcircle(red_hue_image)
+def draw_circles(circles_red,circles_green,org_image,shiftx,shifty):
+   if circles_red is not None:
+      for circles in circles_red[0]:
+         [x_c,y_c,r]=circles
+         x_c=int(x_c+shiftx)
+         y_c=int(y_c+shifty)
+         cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
+         cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
+         cv2.putText(org_image,"red don't go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
 
-   green_hue_image=colordetection(hsvimage,1)
-   circles_green=detectcircle(green_hue_image)
-   
-   return circles_red,circles_green
+   if circles_green is not None:
+      for circles in circles_green[0]:
+         [x_c,y_c,r]=circles
+         x_c=int(x_c+shiftx)
+         y_c=int(y_c+shifty)
+         cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
+         cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
+         cv2.putText(org_image,"green  go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 0, 0), 2)
 
-
-def draw_cicles():
-   pass
-# cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
-# cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
-# cv2.putText(org_image,"red don't go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
-
-
+   return org_image
 
 def update_reference(circles_red, circles_green, frame_no):
    circles_x=[]
@@ -131,8 +132,7 @@ def process_frame(org_image):
    
    red_hue_image=colordetection(hsvimage,0)
    circles_red=detectcircle(red_hue_image)
-   #print circles_red        
-        
+   #print circles_red             
       
    green_hue_image=colordetection(hsvimage,1)
    circles_green=detectcircle(green_hue_image)
@@ -175,6 +175,7 @@ azimuth_max=max(azimuth)
 
 is_first_frame=True
 
+
 frame_no=0
 x1=y1=x2=y2=h=w=ref_pitch=ref_azimuth = None
 
@@ -187,6 +188,7 @@ while(cap.isOpened()):
       circles_red, circles_green = process_frame(org_image)
       if(circles_red is not None or circles_green is not None):
          x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
+         org_image=draw_circles(circles_red,circles_green,org_image,0,0)
          cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
          is_first_frame=False
 
@@ -199,49 +201,30 @@ while(cap.isOpened()):
 
       i=0
       while True:
-         i +=1
-         circles_red,_=scanarea(x1_n,x2_n,y1_n,y2_n,org_image)
-                  
-         print circles_red
-         if circles_red is None:
+         img=org_image[y1_n:y2_n,x1_n:x2_n]
+         circles_red,circles_green=process_frame(img)
 
-            x1_n = max(0,x1_n-SCAN_INCREMENT)
-            y1_n = max(0,y1_n-SCAN_INCREMENT)
-            x2_n = min(1920,x2_n+SCAN_INCREMENT)
-            y2_n = min(1080,y2_n+SCAN_INCREMENT)
+         print circles_red,circles_green
+         if (circles_red is None and circles_green is None): # no cicles currently, so we need to search larger area
+            x1_n = max(0, x1_n-SCAN_INCREMENT)
+            y1_n = max(0, y1_n-SCAN_INCREMENT)
+            x2_n = min(1920, x2_n+SCAN_INCREMENT)
+            y2_n = min(1080, y2_n+SCAN_INCREMENT)
+            i +=1
             
-         else:
-            cv2.rectangle(org_image,(x1_n,y1_n), (x2_n,y2_n),(255,255,255),3)        
+         else: # either red or green is detected            
+            cv2.rectangle(org_image,(x1_n,y1_n), (x2_n,y2_n),(255,255,255),3)
+            break
+         if i==2: #TODO: remote this. check if current rectangle >= frame_size
             break
          
-         if i==2:
-            break
+      if (circles_red is not None or circles_green is not None):
+         if(i>0): # rectangle was increased for search, so need to update reference.
+            x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          
-      if circles_red is not None:
-         for circles in circles_red[0]:
-            [x_c,y_c,r]=circles
-            x_c=int(x_c+x1_n)
-            y_c=int(y_c+y1_n)
-            cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
-            cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
-            cv2.putText(org_image,"red don't go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
-
-         cv2.rectangle(org_image,(x1_n,y1_n), (x2_n,y2_n),(255,255,255),3)        
-            
-      _,circles_green=scanarea(x1_n,x2_n,y1_n,y2_n,org_image)
-         
-
-      if circles_green is not None:
-         for circles in circles_green[0]:
-            [x_c,y_c,r]=circles
-            x_c=int(x_c+x1_n)
-            y_c=int(y_c+y1_n)
-            cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
-            cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
-            cv2.putText(org_image,"green  go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 0, 0), 2)
+         org_image=draw_circles(circles_red,circles_green,org_image,x1_n,y1_n)
 
    out.write(org_image)
-   firstdraw=False
    frame_no +=1
          
    if cv2.waitKey(25) & 0xFF == ord('q'):# Press Q on keyboard to  exit
