@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import csv
 import math
+import time
 
 RECTANGLE_INIT_SIZE=120
 SCAN_INCREMENT_WIDTH=100
@@ -12,6 +13,21 @@ HISTORY_SIZE=10
 FACTOR=1.5
 REC_AREA=1920*1080
 
+def readfile(new_file):
+   f = open(new_file, "r")
+   lines=f.readlines()
+   lines=[x.strip('\n')for x in lines]
+   pitch=[]
+   roll=[]
+   azimuth=[]
+
+   for row in lines:
+      columns= row.split(' ')
+      pitch.append(float(columns[2]))
+      roll.append(float(columns[3]))
+      azimuth.append(float(columns[4]))
+
+   return pitch,roll,azimuth
 
 def colordetection(hsvimage,flag):
    if flag==0:
@@ -35,11 +51,12 @@ def colordetection(hsvimage,flag):
 
 def detectcircle(image):
    circles=cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 1, image.shape[0]/6,np.array([]),200, 15,5,8)
-   #print circles
    return circles
 
 
-def drawrectangle(x1,y1,refp,minip,maxip,diffp,refa,minia,maxia,diffa,w,h):
+def drawrectangle(x1,y1,pitch_data,azimuth_data,w,h):
+   refp,minip,maxip,diffp=pitch_data
+   refa,minia,maxia,diffa=azimuth_data
    if diffp > 0:
       y1n= y1+((0-y1)/(maxip-refp))*diffp
    else:
@@ -135,8 +152,7 @@ def process_frame(org_image):
    hsvimage=cv2.cvtColor(image,cv2.COLOR_BGR2HSV);# Convert input image to HSV
    
    red_hue_image=colordetection(hsvimage,0)
-   circles_red=detectcircle(red_hue_image)
-   #print circles_red             
+   circles_red=detectcircle(red_hue_image)            
       
    green_hue_image=colordetection(hsvimage,1)
    circles_green=detectcircle(green_hue_image)
@@ -145,23 +161,23 @@ def process_frame(org_image):
    return circles_red, circles_green
 
 def finaldata(circles_red,circles_green):
-   circle_red_position=[]
-   circle_green_position=[]
+   red_pos=[]
+   green_pos=[]
 
    len_red=len_green=0
    if circles_red is not None:
       len_red=len(circles_red[0])
       for circles in circles_red[0]:
          [x_c,y_c,r]=circles
-         circle_red_position.append((x_c,y_c))
+         red_pos.append((x_c,y_c))
 
    if circles_green is not None:
       len_green=len(circles_green[0])
       for circles in circles_green[0]:
          [x_c,y_c,r]=circles
-         circle_green_position.append((x_c,y_c))
+         green_pos.append((x_c,y_c))
 
-   return len_red,len_green,circle_red_position,circle_green_position
+   return len_red,len_green,red_pos,green_pos
 
 
 ## START OF MAIN FUNCTION
@@ -181,19 +197,8 @@ fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
 out = cv2.VideoWriter("sensor_video/cropanddetect3.avi",fourcc, frame_rate, (frame_width,frame_height))
 
 new_file= "sensor_video/sync.txt" 
-f = open(new_file, "r")
-lines=f.readlines()
-lines=[x.strip('\n')for x in lines]
-pitch=[]
-roll=[]
-azimuth=[]
 
-for row in lines:
-   columns= row.split(' ')
-   pitch.append(float(columns[2]))
-   roll.append(float(columns[3]))
-   azimuth.append(float(columns[4]))
-
+pitch,roll,azimuth=readfile(new_file)
 pitch_min=min(pitch)
 pitch_max=max(pitch)
 azimuth_min=min(azimuth)
@@ -202,46 +207,47 @@ azimuth_max=max(azimuth)
 
 
 write_file=('finaldata.txt')
-
 g = open(write_file, "wt")
-header="frameno red_count green_count red_pos green_pos\n"
+header="frameno"+";"+"frametime"+";"+"red_count"+";"+"green_count"+";"+"red_pos"+";"+"green_pos\n"
 g.write(header)
 
+
 is_first_frame=True
-
-
 frame_no=0
 x1=y1=x2=y2=h=w=ref_pitch=ref_azimuth = None
 
 circle_count_history=[]
 
 while(cap.isOpened()):
+   
    ret, org_image = cap.read()
    if ret==False:
       break
 
+
+   start_frame=time.time()
+   
    if(is_first_frame):
       circles_red, circles_green = process_frame(org_image)
       if(circles_red is not None or circles_green is not None):
          x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          org_image=draw_circles(circles_red,circles_green,org_image,0,0)
          cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
-         len_red,len_green,circle_red_position,circle_green_position=finaldata(circles_red,circles_green)
+         len_red,len_green,red_pos,green_pos=finaldata(circles_red,circles_green)
          is_first_frame=False
 
    else:
       diff_pitch=pitch[frame_no]-ref_pitch
       diff_azimuth=azimuth[frame_no]-ref_azimuth
-      x1_n,x2_n,y1_n,y2_n=drawrectangle(x1,y1,ref_pitch,pitch_min,pitch_max,diff_pitch,ref_azimuth,azimuth_min,azimuth_max,diff_azimuth,w,h)
-
-      #print x1_n,y1_n,x2_n,y2_n
-
+      pitch_data=[ref_pitch,pitch_min,pitch_max,diff_pitch]
+      azimuth_data=[ref_azimuth,azimuth_min,azimuth_max,diff_azimuth]
+      x1_n,x2_n,y1_n,y2_n=drawrectangle(x1,y1,pitch_data,azimuth_data,w,h)
+      print x1_n,y1_n,x2_n,y2_n
       i=0
       while True:
          img=org_image[y1_n:y2_n,x1_n:x2_n]
          circles_red,circles_green=process_frame(img)
 
-         #print circles_red,circles_green
          if (circles_red is None and circles_green is None): # no cicles currently, so we need to search larger area
             if i>1:
                x1_n=int(max(0,x1_n-SCAN_INCREMENT_WIDTH*FACTOR))
@@ -258,7 +264,7 @@ while(cap.isOpened()):
          else: # either red or green is detected            
             cv2.rectangle(org_image,(x1_n,y1_n), (x2_n,y2_n),(255,255,255),3)
             break
-         if ((x2_n-x1_n)*(y2_n-y1_n)==REC_AREA): #TODO: remote this. check if current rectangle >= frame_size
+         if ((x2_n-x1_n)*(y2_n-y1_n)==REC_AREA): 
             break
          
       if (circles_red is not None or circles_green is not None):
@@ -278,9 +284,10 @@ while(cap.isOpened()):
          #    x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          
          org_image=draw_circles(circles_red,circles_green,org_image,x1_n,y1_n)
-         len_red,len_green,circle_red_position,circle_green_position=finaldata(circles_red,circles_green)
+         len_red,len_green,red_pos,green_pos=finaldata(circles_red,circles_green)
 
-   out_str=str(frame_no)+" "+str(len_red)+" "+str(len_green)+" \""+str(circle_red_position)+"\" \""+str(circle_green_position)+"\"\n"
+   frame_time=time.time()-start_frame
+   out_str=str(frame_no)+";"+str(frame_time)+";"+str(len_red)+";"+str(len_green)+";\""+str(red_pos)+"\";\""+str(green_pos)+"\"\n"
    g.write(out_str)
 
    out.write(org_image)
