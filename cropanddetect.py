@@ -3,7 +3,9 @@ import numpy as np
 import glob
 import math
 
+RECTANGLE_INIT_SIZE=100
 SCAN_INCREMENT=150
+
 
 def colordetection(hsvimage,flag):
    if flag==0:
@@ -77,6 +79,66 @@ def scanarea(x1_n,x2_n,y1_n,y2_n,org_image):
    return circles_red,circles_green
 
 
+def draw_cicles():
+   pass
+# cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
+# cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
+# cv2.putText(org_image,"red don't go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
+
+
+
+def update_reference(circles_red, circles_green, frame_no):
+   circles_x=[]
+   circles_y=[]
+
+   # TODO: is this a valid logic? if both red and green are detected then the bounding box will
+   # take all of them together
+   if circles_red is not None:
+      for circles in circles_red[0]:
+         [x_c,y_c,r]=circles
+         circles_x.append(x_c)
+         circles_y.append(y_c)
+
+   if circles_green is not None:
+      for circles in circles_green[0]:
+         [x_c,y_c,r]=circles
+         circles_x.append(x_c)
+         circles_y.append(y_c)
+      
+   circles_x.sort()
+   circles_y.sort()
+   x1= int(round(circles_x[0]))
+   y1= int(round(circles_y[0]))
+   x2= int(round(circles_x[len(circles_x)-1]))
+   y2= int(round(circles_y[len(circles_y)-1]))
+
+   x1=x1-RECTANGLE_INIT_SIZE
+   y1=y1-RECTANGLE_INIT_SIZE
+   x2=x2+RECTANGLE_INIT_SIZE
+   y2=y2+RECTANGLE_INIT_SIZE
+   h=y2-y1
+   w=x2-x1
+
+   ref_pitch=pitch[frame_no]
+   ref_azimuth=azimuth[frame_no]
+   
+   return x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth
+   
+
+def process_frame(org_image):
+   image=cv2.medianBlur(org_image,3)
+   hsvimage=cv2.cvtColor(image,cv2.COLOR_BGR2HSV);# Convert input image to HSV
+   
+   red_hue_image=colordetection(hsvimage,0)
+   circles_red=detectcircle(red_hue_image)
+   #print circles_red        
+        
+      
+   green_hue_image=colordetection(hsvimage,1)
+   circles_green=detectcircle(green_hue_image)
+
+
+   return circles_red, circles_green
 
    
 cap = cv2.VideoCapture("sensor_video/text_with_sensor.avi")
@@ -105,84 +167,32 @@ for row in lines:
    pitch.append(float(columns[2]))
    roll.append(float(columns[3]))
    azimuth.append(float(columns[4]))
+
 pitch_min=min(pitch)
 pitch_max=max(pitch)
 azimuth_min=min(azimuth)
 azimuth_max=max(azimuth)
 
-count=0
-detect=False
+is_first_frame=True
+
+frame_no=0
+x1=y1=x2=y2=h=w=ref_pitch=ref_azimuth = None
+
 while(cap.isOpened()):
    ret, org_image = cap.read()
    if ret==False:
       break
 
-   while(not detect):
-      image=cv2.medianBlur(org_image,3)
-      hsvimage=cv2.cvtColor(image,cv2.COLOR_BGR2HSV);# Convert input image to HSV
-        
-      red_hue_image=colordetection(hsvimage,0)
-      circles_red=detectcircle(red_hue_image)
-      #print circles_red        
-        
-      if circles_red is not None:
-         x=[]
-         y=[]
-         for circles in circles_red[0]:
-            [x_c,y_c,r]=circles
-            cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
-            cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
-            cv2.putText(org_image,"red don't go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
-            x.append(x_c)
-            y.append(y_c)
+   if(is_first_frame):
+      circles_red, circles_green = process_frame(org_image)
+      if(circles_red is not None or circles_green is not None):
+         x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
+         cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
+         is_first_frame=False
 
-         x.sort()
-         y.sort()
-         x1= int(round(x[0]))
-         y1= int(round(y[0]))
-         x2= int(round(x[len(x)-1]))
-         y2= int(round(y[len(y)-1]))
-          
-      green_hue_image=colordetection(hsvimage,1)
-      circles_green=detectcircle(green_hue_image)
-
-      if circles_green is not None:
-         x=[]
-         y=[]
-         for circles in circles_green[0]:
-            [x_c,y_c,r]=circles
-            cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
-            cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
-            cv2.putText(org_image,"green  go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 0, 0), 2)
-            x.append(x_c)
-            y.append(y_c)
-
-         x.sort()
-         y.sort()
-         x1= int(round(x[0]))
-         y1= int(round(y[0]))
-         x2= int(round(x[len(x)-1]))
-         y2= int(round(y[len(y)-1]))
-      detect=True
-      firstdraw=True
-         
-
-   if detect == True and firstdraw == True:
-      x1=x1-100
-      y1=y1-100
-      x2=x2+100
-      y2=y2+100
-      h=y2-y1
-      w=x2-x1
-      cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
-      out.write(org_image)
-      ref_pitch=pitch[count]
-      ref_azimuth=azimuth[count]
-
-
-   if firstdraw == False:
-      diff_pitch=pitch[count]-ref_pitch
-      diff_azimuth=azimuth[count]-ref_azimuth
+   else:
+      diff_pitch=pitch[frame_no]-ref_pitch
+      diff_azimuth=azimuth[frame_no]-ref_azimuth
       x1_n,x2_n,y1_n,y2_n=drawrectangle(x1,y1,ref_pitch,pitch_min,pitch_max,diff_pitch,ref_azimuth,azimuth_min,azimuth_max,diff_azimuth,w,h)
 
       print x1_n,y1_n,x2_n,y2_n
@@ -232,7 +242,7 @@ while(cap.isOpened()):
 
    out.write(org_image)
    firstdraw=False
-   count +=1
+   frame_no +=1
          
    if cv2.waitKey(25) & 0xFF == ord('q'):# Press Q on keyboard to  exit
       break
