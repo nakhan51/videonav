@@ -204,8 +204,8 @@ azimuth_max=max(azimuth)
 write_file=('finaldata.csv')
 
 g = open(write_file, "wt")
-writer=csv.writer(g)
-writer.writerow( ('frameno', 'no_of_red_circles', 'no_of_green_circles', 'circle_red_position', 'circle_green_position') )
+header="frameno red_count green_count red_pos green_pos"
+g.write(header)
 
 is_first_frame=True
 
@@ -280,7 +280,9 @@ while(cap.isOpened()):
          org_image=draw_circles(circles_red,circles_green,org_image,x1_n,y1_n)
          len_red,len_green,circle_red_position,circle_green_position=finaldata(circles_red,circles_green)
 
-   writer.writerow((frame_no, len_red, len_green, circle_red_position, circle_green_position))
+   out_str=str(frame_no)+" "+str(len_red)+" "+str(len_green)+" \""+str(circle_red_position)+"\" \""+str(circle_green_position)+"\"\n"
+   g.write(out_str)
+   print out_str
 
    out.write(org_image)
    frame_no +=1
