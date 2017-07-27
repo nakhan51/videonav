@@ -242,7 +242,7 @@ while(cap.isOpened()):
       pitch_data=[ref_pitch,pitch_min,pitch_max,diff_pitch]
       azimuth_data=[ref_azimuth,azimuth_min,azimuth_max,diff_azimuth]
       x1_n,x2_n,y1_n,y2_n=drawrectangle(x1,y1,pitch_data,azimuth_data,w,h)
-      print x1_n,y1_n,x2_n,y2_n
+      #print x1_n,y1_n,x2_n,y2_n
       i=0
       while True:
          img=org_image[y1_n:y2_n,x1_n:x2_n]
@@ -297,7 +297,7 @@ while(cap.isOpened()):
       break
 
 cap.release()
-f.close()
+#f.close()
 g.close()
 out.release()
 cv2.destroyAllWindows()
