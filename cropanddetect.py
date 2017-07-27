@@ -7,6 +7,7 @@ RECTANGLE_INIT_SIZE=100
 SCAN_INCREMENT=150
 MAX_HEIGHT=100
 MAX_WIDTH=100
+HISTORY_SIZE=10
 
 
 def colordetection(hsvimage,flag):
@@ -179,6 +180,8 @@ is_first_frame=True
 frame_no=0
 x1=y1=x2=y2=h=w=ref_pitch=ref_azimuth = None
 
+circle_count_history=[]
+
 while(cap.isOpened()):
    ret, org_image = cap.read()
    if ret==False:
@@ -223,6 +226,18 @@ while(cap.isOpened()):
             x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          
          org_image=draw_circles(circles_red,circles_green,org_image,x1_n,y1_n)
+
+         len_red=len_green=0
+         if circles_red is not None:
+            len_red=len(circles_red[0])
+
+         if circles_green is not None:
+            len_green=len(circles_green[0])
+            
+         circle_count_history.append(max(len_red, len_green))
+         print "history", circle_count_history[-HISTORY_SIZE:], \
+            int(math.ceil(sum(circle_count_history[-HISTORY_SIZE:])/float(len(circle_count_history[-HISTORY_SIZE:]))))
+
 
    out.write(org_image)
    frame_no +=1
