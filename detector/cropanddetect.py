@@ -161,23 +161,28 @@ def process_frame(org_image):
    return circles_red, circles_green
 
 def finaldata(circles_red,circles_green,shiftx,shifty):
-   red_pos=[]
-   green_pos=[]
+   color=[]
+   cir_pos=[]
 
-   len_red=len_green=0
    if circles_red is not None:
-      len_red=len(circles_red[0])
       for circles in circles_red[0]:
+         c=0
          [x_c,y_c,r]=circles
-         red_pos.append(((x_c+shiftx),(y_c+shifty)))
+         x_c=int(x_c+shiftx)
+         y_c=int(y_c+shifty)
+         cir_pos.append((x_c,y_c))
+         color.append(c)
 
    if circles_green is not None:
-      len_green=len(circles_green[0])
       for circles in circles_green[0]:
+         c=1
          [x_c,y_c,r]=circles
-         green_pos.append(((x_c+shiftx),(y_c+shifty)))
+         x_c=int(x_c+shiftx)
+         y_c=int(y_c+shifty)
+         cir_pos.append((x_c,y_c))
+         color.append(c)
 
-   return len_red,len_green,red_pos,green_pos
+   return cir_pos,color
 
 
 ## START OF MAIN FUNCTION
@@ -206,9 +211,9 @@ azimuth_max=max(azimuth)
 
 
 
-write_file=('finaldata.txt')
+write_file=('data/finaldata.txt')
 g = open(write_file, "wt")
-header="frameno"+";"+"frametime"+";"+"red_count"+";"+"green_count"+";"+"red_pos"+";"+"green_pos\n"
+header="frameno"+";"+"frametime"+";"+"cir_pos"+";"+"color\n"
 g.write(header)
 
 
@@ -233,7 +238,7 @@ while(cap.isOpened()):
          x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          org_image=draw_circles(circles_red,circles_green,org_image,0,0)
          cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
-         len_red,len_green,red_pos,green_pos=finaldata(circles_red,circles_green,0,0)
+         cir_pos,color=finaldata(circles_red,circles_green,0,0)
          is_first_frame=False
 
    else:
@@ -284,10 +289,10 @@ while(cap.isOpened()):
          #    x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          
          org_image=draw_circles(circles_red,circles_green,org_image,x1_n,y1_n)
-         len_red,len_green,red_pos,green_pos=finaldata(circles_red,circles_green,x1_n,x2_n)
+         cir_pos,color=finaldata(circles_red,circles_green,x1_n,y1_n)
 
    frame_time=time.time()-start_frame
-   out_str=str(frame_no)+";"+str(frame_time)+";"+str(len_red)+";"+str(len_green)+";\""+str(red_pos)+"\";\""+str(green_pos)+"\"\n"
+   out_str=str(frame_no)+";"+str(frame_time)+";\""+str(cir_pos)+"\";\""+str(color)+"\"\n"
    g.write(out_str)
 
    out.write(org_image)
