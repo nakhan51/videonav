@@ -28,7 +28,7 @@ def colordetection(hsvimage,flag):
       return green_hue_image
 
 def detectcircle(image):
-   circles=cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 1, image.shape[0]/6,np.array([]),200, 15,5,8)
+   circles=cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 1, image.shape[0]/6,np.array([]),200, 15,5,10)
    return circles
 
 def midpointcircledraw(x_c,y_c,r):
@@ -103,31 +103,41 @@ def rectangle_per(hsvimage,x_c,y_c,r,flag):
    count=0
    for i in range(0,len(points)):
       x,y=points[i]
+      print x,y
       color=hsvimage[y,x]
+      print color
       if color[2]<blackrange:
          count +=1
    return (count/float(len(points)))*100
 
 
 
-def finaldata(circles_red,circles_green):
-   red_pos=[]
-   green_pos=[]
+def finaldata(circles_red,circles_green,shiftx,shifty):
+   color=[]
+   cir_pos=[]
+   radi=[]
 
-   len_red=len_green=0
    if circles_red is not None:
-      len_red=len(circles_red[0])
       for circles in circles_red[0]:
+         c=0
          [x_c,y_c,r]=circles
-         red_pos.append((x_c,y_c))
+         x_c=int(x_c+shiftx)
+         y_c=int(y_c+shifty)
+         cir_pos.append((x_c,y_c))
+         color.append(c)
+         radi.append(r)
 
    if circles_green is not None:
-      len_green=len(circles_green[0])
       for circles in circles_green[0]:
+         c=1
          [x_c,y_c,r]=circles
-         green_pos.append((x_c,y_c))
+         x_c=int(x_c+shiftx)
+         y_c=int(y_c+shifty)
+         cir_pos.append((x_c,y_c))
+         color.append(c)
+         radi.append(r)
 
-   return len_red,len_green,red_pos,green_pos
+   return cir_pos,color,radi
 
 def process_frame(org_image):
    image=cv2.medianBlur(org_image,3)
@@ -144,14 +154,14 @@ def process_frame(org_image):
 
 
 
-write_file=('data_no_crop_black_filter.txt')
+write_file=('walk_video/datanocrop_black.txt')
 g = open(write_file, "wt")
-header="frameno"+";"+"frametime"+";"+"red_count"+";"+"green_count"+";"+"red_pos"+";"+"green_pos\n"
+header="frameno"+";"+"frametime"+";"+"radious"+";"+"cir_pos"+";"+"color\n"
 g.write(header)
 
 
 # Create a VideoCapture object and read from input file
-cap = cv2.VideoCapture('sensor_video/output_sensor.avi')
+cap = cv2.VideoCapture('walk_video/output_walk.avi')
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
@@ -165,7 +175,7 @@ frame_rate=int(round(cap.get(cv2.cv.CV_CAP_PROP_FPS)))
 
 # Define the codec and create VideoWriter object.
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter('sensor_video/detection_sensor.avi',fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter('walk_video/nocrp_black.avi',fourcc, frame_rate, (frame_width,frame_height))
 
 
 frame_no=0
@@ -205,9 +215,9 @@ while(cap.isOpened()):
             cv2.putText(org_image,"green go",(int(x_c+10),int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 0, 0), 2)  
 
 
-   len_red,len_green,red_pos,green_pos=finaldata(circles_red,circles_green)
+   cir_pos,color,radi=finaldata(circles_red,circles_green,0,0)
    frame_time=time.time()-start_frame
-   out_str=str(frame_no)+";"+str(frame_time)+";"+str(len_red)+";"+str(len_green)+";\""+str(red_pos)+"\";\""+str(green_pos)+"\"\n"
+   out_str=str(frame_no)+";"+str(frame_time)+";\""+str(radi)+"\";\""+str(cir_pos)+"\";\""+str(color)+"\"\n"
    g.write(out_str)
    out.write(org_image)
    frame_no +=1

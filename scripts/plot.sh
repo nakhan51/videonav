@@ -20,7 +20,7 @@ set xlabel "Time (ms)"
 set ylabel "CDF"
  
 set output "plots/cdf_time.pdf"
-plot [:300][:] \
+plot [:][:] \
 'plotdata/cdf_time_cropped.txt' u 2:1 w lines ti "w/ sensor", \
 'plotdata/cdf_time_notcropped.txt' u 2:1 w lines ti "w/o sensor"
 

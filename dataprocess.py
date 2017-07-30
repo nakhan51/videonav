@@ -11,7 +11,8 @@ def checkbound(boxes,cir_pos,ann_clr,det_clr,ann_cir_cnt):
     no_box=len(boxes)
     no_cir=len(cir_pos)
     FN=0
-    
+    TP=0
+    FP=0
     if (no_box > 0 and no_cir == 0):
         FN +=1
 
@@ -52,10 +53,10 @@ lines=[x.strip('\n\r')for x in lines]
 
 for row in lines[1:]:
     cols= row.split(';')
-    frame_no, red_count,green_count,red_pos,green_pos=int(cols[0]), int(cols[2]), int(cols[3]), (cols[4]), (cols[5])
-    red_pos=json.loads(red_pos.decode('string-escape').strip('"'))
-    green_pos=json.loads(green_pos.decode('string-escape').strip('"'))
-    notcrop_dic[frame_no]=(red_count,green_count,red_pos,green_pos)
+    frame_no, nocrp_cir_pos,nocrp_cir_color=int(cols[0]), (cols[2]), (cols[3])
+    nocrp_cir_pos=json.loads(nocrp_cir_pos.decode('string-escape').strip('"'))
+    nocrp_cir_color=json.loads(nocrp_cir_color.decode('string-escape').strip('"'))
+    notcrop_dic[frame_no]=(nocrp_cir_pos,nocrp_cir_color)
 
 
 with open('data/cropdata.txt') as f:
@@ -70,8 +71,8 @@ for row in lines[1:]:
     crop_dic[crp_frameno]=(crp_cir_pos,crp_cir_color)
 
     
-for k in crop_dic.keys():
-    (crp_cir_pos,crp_cir_color)=crop_dic[k]
+for k in notcrop_dic.keys():
+    (crp_cir_pos,crp_cir_color)=notcrop_dic[k]
     if not k in annote_dic:
         continue
     (circle_count, boxes, color)=annote_dic[k]

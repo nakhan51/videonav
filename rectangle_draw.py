@@ -77,7 +77,7 @@ def drawrectangle(x1,y1,refp,minip,maxip,diffp,refa,minia,maxia,diffa,w,h):
     
    return x1n,x2n,y1n,y2n
 
-cap = cv2.VideoCapture("sensor_video/text_with_sensor.avi")
+cap = cv2.VideoCapture("walk_video/text_with_sensor.avi")
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
@@ -89,9 +89,9 @@ frame_rate=int(cap.get(cv2.cv.CV_CAP_PROP_FPS ))
 #print frame_rate
 
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter("sensor_video/rectangle.avi",fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter("walk_video/rectangle.avi",fourcc, frame_rate, (frame_width,frame_height))
 
-new_file= "sensor_video/sync.txt" 
+new_file= "walk_video/sync.txt" 
 f = open(new_file, "r")
 lines=f.readlines()
 lines=[x.strip('\n')for x in lines]

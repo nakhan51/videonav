@@ -187,7 +187,7 @@ def finaldata(circles_red,circles_green,shiftx,shifty):
 
 ## START OF MAIN FUNCTION
 
-cap = cv2.VideoCapture("sensor_video/text_with_sensor.avi")
+cap = cv2.VideoCapture("walk_video/text_with_sensor.avi")
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
@@ -199,9 +199,9 @@ frame_rate=int(round(cap.get(cv2.cv.CV_CAP_PROP_FPS )))
 
 
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter("sensor_video/cropanddetect3.avi",fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter("walk_video/cropanddetect3.avi",fourcc, frame_rate, (frame_width,frame_height))
 
-new_file= "sensor_video/sync.txt" 
+new_file= "walk_video/sync.txt" 
 
 pitch,roll,azimuth=readfile(new_file)
 pitch_min=min(pitch)
@@ -211,7 +211,7 @@ azimuth_max=max(azimuth)
 
 
 
-write_file=('data/finaldata.txt')
+write_file=('walk_video/finaldata.txt')
 g = open(write_file, "wt")
 header="frameno"+";"+"frametime"+";"+"cir_pos"+";"+"color\n"
 g.write(header)
@@ -234,11 +234,12 @@ while(cap.isOpened()):
    
    if(is_first_frame):
       circles_red, circles_green = process_frame(org_image)
+      print circles_green, circles_red
       if(circles_red is not None or circles_green is not None):
          x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          org_image=draw_circles(circles_red,circles_green,org_image,0,0)
          cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
-         cir_pos,color=finaldata(circles_red,circles_green,0,0)
+         circ_pos,color=finaldata(circles_red,circles_green,0,0)
          is_first_frame=False
 
    else:
@@ -273,27 +274,28 @@ while(cap.isOpened()):
             break
          
       if (circles_red is not None or circles_green is not None):
-         # len_red=len_green=0
-         # if circles_red is not None:
-         #    len_red=len(circles_red[0])
+         len_red=len_green=0
+         if circles_red is not None:
+            len_red=len(circles_red[0])
 
-         # if circles_green is not None:
-         #    len_green=len(circles_green[0])
+         if circles_green is not None:
+            len_green=len(circles_green[0])
 
-         # max_val=max(len_red, len_green)
-         # #circle_count_history.append(max_val)
+         max_val=max(len_red, len_green)
+         circle_count_history.append(max_val)
             
-         # #avg_circle_count=int(math.ceil(sum(circle_count_history[-HISTORY_SIZE:])/float(len(circle_count_history[-HISTORY_SIZE:]))))
+         avg_circle_count=int(math.ceil(sum(circle_count_history[-HISTORY_SIZE:])/float(len(circle_count_history[-HISTORY_SIZE:]))))
 
-         # if(i>0 and max_val>=2): # rectangle was increased for search, so need to update reference.
-         #    x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
+         if(i>0 and max_val>=avg_circle_count): # rectangle was increased for search, so need to update reference.
+            x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          
          org_image=draw_circles(circles_red,circles_green,org_image,x1_n,y1_n)
-         cir_pos,color=finaldata(circles_red,circles_green,x1_n,y1_n)
+         circ_pos,color=finaldata(circles_red,circles_green,x1_n,y1_n)
 
    frame_time=time.time()-start_frame
-   out_str=str(frame_no)+";"+str(frame_time)+";\""+str(cir_pos)+"\";\""+str(color)+"\"\n"
-   g.write(out_str)
+   if (circles_red is not None or circles_green is not None):
+      out_str=str(frame_no)+";"+str(frame_time)+";\""+str(circ_pos)+"\";\""+str(color)+"\"\n"
+      g.write(out_str)
 
    out.write(org_image)
    frame_no +=1
