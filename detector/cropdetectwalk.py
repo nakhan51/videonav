@@ -45,7 +45,7 @@ def colordetection(hsvimage,flag):
    else:
       #Threshold the HSV image, keep only the red pixels
       green_hue_range=cv2.inRange(hsvimage, np.array((50, 100, 100),dtype = "uint8"), np.array((95, 255, 255),dtype = "uint8"));
-        
+      
       green_hue_image=cv2.GaussianBlur(green_hue_range, (9, 9), 2, 2);
 
       return green_hue_image
@@ -56,6 +56,7 @@ def detectcircle(image):
 
 
 def drawrectangle(x1,y1,pitch_data,azimuth_data,w,h):
+   #print "drawrec", pitch_data,azimuth_data,w,h,x1,y1
    refp,minip,maxip,diffp=pitch_data
    refa,minia,maxia,diffa=azimuth_data
    if diffp > 0:
@@ -68,11 +69,11 @@ def drawrectangle(x1,y1,pitch_data,azimuth_data,w,h):
    else:   
       x1n=x1+((x1-frame_width)/(refa-minia))*diffa
 
+   x1n=int(max(0,x1n))
+   y1n=int(max(0,y1n))
    x2n=x1n+w
    y2n=y1n+h
-   x1n=int(max(0,x1n))
    x2n=int(min(x2n,frame_width))
-   y1n=int(max(0,y1n))
    y2n=int(min(y2n,frame_height))
 
    if x2n-x1n < MAX_WIDTH:
@@ -85,7 +86,7 @@ def drawrectangle(x1,y1,pitch_data,azimuth_data,w,h):
          y2n = y2n+MAX_HEIGHT
       if y2n == frame_height:
          y1n = y1n-MAX_HEIGHT
-    
+         
    return x1n,x2n,y1n,y2n
 
 
@@ -127,7 +128,7 @@ def update_reference(circles_red, circles_green, frame_no):
          [x_c,y_c,r]=circles
          circles_x.append(x_c)
          circles_y.append(y_c)
-      
+         
    circles_x.sort()
    circles_y.sort()
    x1= int(round(circles_x[0]))
@@ -157,15 +158,16 @@ def update_reference(circles_red, circles_green, frame_no):
    ref_azimuth=azimuth[frame_no]
    
    return x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth
-   
+
 
 def process_frame(org_image):
+   #print org_image.shape
    image=cv2.medianBlur(org_image,3)
    hsvimage=cv2.cvtColor(image,cv2.COLOR_BGR2HSV);# Convert input image to HSV
    
    red_hue_image=colordetection(hsvimage,0)
    circles_red=detectcircle(red_hue_image)            
-      
+   
    green_hue_image=colordetection(hsvimage,1)
    circles_green=detectcircle(green_hue_image)
 
@@ -197,11 +199,8 @@ def finaldata(circles_red,circles_green,shiftx,shifty):
    return cir_pos,color
 
 
-## START OF MAIN FUNCTION
-
 cap = cv2.VideoCapture("walk_video/text_with_sensor.avi")
 
-# Check if camera opened successfully
 if (cap.isOpened()== False): 
    print("Error opening video stream or file")
 
@@ -211,7 +210,7 @@ frame_rate=int(round(cap.get(cv2.cv.CV_CAP_PROP_FPS )))
 
 
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter("walk_video/cropanddetect3.avi",fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter("walk_video/cropanddetect.avi",fourcc, frame_rate, (frame_width,frame_height))
 
 new_file= "walk_video/sync.txt" 
 
@@ -241,7 +240,7 @@ while(cap.isOpened()):
    if ret==False:
       break
 
-
+   print frame_no
    start_frame=time.time()
    
    if(is_first_frame):
@@ -260,7 +259,7 @@ while(cap.isOpened()):
       pitch_data=[ref_pitch,pitch_min,pitch_max,diff_pitch]
       azimuth_data=[ref_azimuth,azimuth_min,azimuth_max,diff_azimuth]
       x1_n,x2_n,y1_n,y2_n=drawrectangle(x1,y1,pitch_data,azimuth_data,w,h)
-      #print x1_n,y1_n,x2_n,y2_n
+      #print "newrecpoint", x1_n,y1_n,x2_n,y2_n
       i=0
       while True:
          img=org_image[y1_n:y2_n,x1_n:x2_n]
@@ -277,14 +276,14 @@ while(cap.isOpened()):
                y1_n = max(0, y1_n-SCAN_INCREMENT_HEIGHT)
                x2_n = min(frame_width, x2_n+SCAN_INCREMENT_WIDTH)
                y2_n = min(frame_height, y2_n+SCAN_INCREMENT_HEIGHT)
-            i +=1
-            
+               i +=1
+               
          else: # either red or green is detected            
             cv2.rectangle(org_image,(x1_n,y1_n), (x2_n,y2_n),(255,255,255),3)
             break
          # if ((x2_n-x1_n)*(y2_n-y1_n)==REC_AREA): 
          #    break
-         if i==4:
+         if i==2:
             break
          
       if (circles_red is not None or circles_green is not None):
@@ -296,26 +295,26 @@ while(cap.isOpened()):
             len_green=len(circles_green[0])
 
          max_val=max(len_red, len_green)
-         circle_count_history.append(max_val)
-            
-         avg_circle_count=int(math.ceil(sum(circle_count_history[-HISTORY_SIZE:])/float(len(circle_count_history[-HISTORY_SIZE:]))))
+         # circle_count_history.append(max_val)   
+         # avg_circle_count=int(math.ceil(sum(circle_count_history[-HISTORY_SIZE:])/float(len(circle_count_history[-HISTORY_SIZE:]))))
 
-         if(i>0 and max_val>=avg_circle_count): # rectangle was increased for search, so need to update reference.
+         if(i>0 and max_val>=2): # rectangle was increased for search, so need to update reference.
             x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
-         
+   
          org_image=draw_circles(circles_red,circles_green,org_image,x1_n,y1_n)
          circ_pos,color=finaldata(circles_red,circles_green,x1_n,y1_n)
+         #print circles_red,circles_green
 
    frame_time=time.time()-start_frame
-   if (circles_red is not None or circles_green is not None):
-      out_str=str(frame_no)+";"+str(frame_time)+";\""+str(circ_pos)+"\";\""+str(color)+"\"\n"
-      g.write(out_str)
+   out_str=str(frame_no)+";"+str(frame_time)+";\""+str(circ_pos)+"\";\""+str(color)+"\"\n"
+   g.write(out_str)
 
    out.write(org_image)
    frame_no +=1
-         
+   
    if cv2.waitKey(25) & 0xFF == ord('q'):# Press Q on keyboard to  exit
       break
+
 
 cap.release()
 #f.close()

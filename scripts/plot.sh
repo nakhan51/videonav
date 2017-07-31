@@ -10,19 +10,19 @@ set xlabel "Frame"
 set ylabel "Time (ms)"
 
 # scatter plot
-set output "plots/frame_time.pdf"
+set output "plots/walk_frame_time.pdf"
 plot \
-'plotdata/frame_time_cropped.txt' u 1:2 ti "w/ sensor", \
-'plotdata/frame_time_notcropped.txt' u 1:2 ti "w/o sensor"
+'plotdata/walk_frame_time_cropped.txt' u 1:2 ti "w/ sensor", \
+'plotdata/walk_frame_time_notcropped.txt' u 1:2 ti "w/o sensor"
 
 # cdf
 set xlabel "Time (ms)"
 set ylabel "CDF"
  
-set output "plots/cdf_time.pdf"
+set output "plots/walk_cdf_time.pdf"
 plot [:][:] \
-'plotdata/cdf_time_cropped.txt' u 2:1 w lines ti "w/ sensor", \
-'plotdata/cdf_time_notcropped.txt' u 2:1 w lines ti "w/o sensor"
+'plotdata/walk_cdf_time_cropped.txt' u 2:1 w lines ti "w/ sensor", \
+'plotdata/walk_cdf_time_notcropped.txt' u 2:1 w lines ti "w/o sensor"
 
 
 EOF
