@@ -87,7 +87,7 @@ def draw_circles(circles_red,circles_green,org_image,shiftx,shifty):
    return org_image
 
 
-write_file=('walk_video/nocrop_nofilter.txt')
+write_file=('data/walk_nocrop_nofilter.txt')
 g = open(write_file, "wt")
 header="frameno"+";"+"frametime"+";"+"radious"+";"+"cir_pos"+";"+"color\n"
 g.write(header)
@@ -108,7 +108,7 @@ frame_rate=int(round(cap.get(cv2.cv.CV_CAP_PROP_FPS)))
 
 # Define the codec and create VideoWriter object.
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter('walk_video/dtctn_nocrop_nofilter.avi',fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter('videos/walk_nocrop_nofilter.avi',fourcc, frame_rate, (frame_width,frame_height))
 
 
 frame_no=0

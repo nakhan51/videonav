@@ -94,7 +94,7 @@ def rectangle_per(hsvimage,x_c,y_c,r,flag):
    if flag==3:
       ymin=y_c-r
       ymax=y_c+r
-      xmin=x_c-2*r-2
+      xmin=x_c-2*r
       xmax=x_c-r
    for y in range(ymin, ymax+1):
       for x in range(xmin,xmax+1):
@@ -103,9 +103,16 @@ def rectangle_per(hsvimage,x_c,y_c,r,flag):
    count=0
    for i in range(0,len(points)):
       x,y=points[i]
-      print x,y
+      if x > 1919:
+         x=1919
+      if x < 0:
+         x=0
+      if y > 1079:
+         y=1079
+      if y < 0:
+         y=0
+      
       color=hsvimage[y,x]
-      print color
       if color[2]<blackrange:
          count +=1
    return (count/float(len(points)))*100
@@ -118,7 +125,7 @@ def finaldata(circles_red,circles_green,shiftx,shifty):
    radi=[]
 
    if circles_red is not None:
-      for circles in circles_red[0]:
+      for circles in circles_red:
          c=0
          [x_c,y_c,r]=circles
          x_c=int(x_c+shiftx)
@@ -128,7 +135,7 @@ def finaldata(circles_red,circles_green,shiftx,shifty):
          radi.append(r)
 
    if circles_green is not None:
-      for circles in circles_green[0]:
+      for circles in circles_green:
          c=1
          [x_c,y_c,r]=circles
          x_c=int(x_c+shiftx)
@@ -139,7 +146,30 @@ def finaldata(circles_red,circles_green,shiftx,shifty):
 
    return cir_pos,color,radi
 
-def process_frame(org_image):
+
+
+def draw_circles(circles_red,circles_green,org_image,shiftx,shifty):
+   if circles_red is not None:
+      for circles in circles_red:
+         [x_c,y_c,r]=circles
+         x_c=int(x_c+shiftx)
+         y_c=int(y_c+shifty)
+         cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
+         cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
+         cv2.putText(org_image,"red don't go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
+
+   if circles_green is not None:
+      for circles in circles_green:
+         [x_c,y_c,r]=circles
+         x_c=int(x_c+shiftx)
+         y_c=int(y_c+shifty)
+         cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
+         cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
+         cv2.putText(org_image,"green  go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 0, 0), 2)
+
+   return org_image
+
+def process_frame_filter(org_image):
    image=cv2.medianBlur(org_image,3)
    hsvimage=cv2.cvtColor(image,cv2.COLOR_BGR2HSV);# Convert input image to HSV
    
@@ -149,12 +179,50 @@ def process_frame(org_image):
    green_hue_image=colordetection(hsvimage,1)
    circles_green=detectcircle(green_hue_image)
 
+   cir_red=[]
+   cir_green=[]
 
-   return hsvimage,circles_red, circles_green
+   # if circles_red is not None:
+   #    for circles in circles_red[0]:
+   #       [x_c,y_c,r]=circles
+   #       x_c=int(x_c)
+   #       y_c=int(y_c)
+   #       if y_c < 500:
+   #          cir_red.append((x_c,y_c,r))
+   # if circles_green is not None:
+   #    for circles in circles_green[0]:
+   #       [x_c,y_c,r]=circles
+   #       x_c=int(x_c)
+   #       y_c=int(y_c)
+   #       if y_c < 500:
+   #          cir_green.append((x_c,y_c,r))
+            
+   if circles_red is not None:
+      for circles in circles_red[0]:
+         [x_c,y_c,r]=circles
+         bottom=rectangle_per(hsvimage,x_c,y_c,r,0)
+         right=rectangle_per(hsvimage,x_c,y_c,r,1)
+         upper=rectangle_per(hsvimage,x_c,y_c,r,2)
+         left=rectangle_per(hsvimage,x_c,y_c,r,3)
+         
+         if bottom > percentile or upper > percentile:
+            cir_red.append((x_c,y_c,r))
+   if circles_green is not None:
+      for circles in circles_green[0]:
+         [x_c,y_c,r]=circles
+         bottom=rectangle_per(hsvimage,x_c,y_c,r,0)
+         right=rectangle_per(hsvimage,x_c,y_c,r,1)
+         upper=rectangle_per(hsvimage,x_c,y_c,r,2)
+         left=rectangle_per(hsvimage,x_c,y_c,r,3)
+         
+         if bottom > percentile or upper > percentile:
+            cir_green.append((x_c,y_c,r))
+            
+   return cir_red, cir_green
 
 
 
-write_file=('walk_video/datanocrop_black.txt')
+write_file=('data/walk_datanocrop_black.txt')
 g = open(write_file, "wt")
 header="frameno"+";"+"frametime"+";"+"radious"+";"+"cir_pos"+";"+"color\n"
 g.write(header)
@@ -175,7 +243,7 @@ frame_rate=int(round(cap.get(cv2.cv.CV_CAP_PROP_FPS)))
 
 # Define the codec and create VideoWriter object.
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter('walk_video/nocrp_black.avi',fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter('videos/walk_nocrp_black.avi',fourcc, frame_rate, (frame_width,frame_height))
 
 
 frame_no=0
@@ -187,38 +255,15 @@ while(cap.isOpened()):
       break
 
    start_frame=time.time()
-   hsvimage,circles_red,circles_green=process_frame(org_image)
-   if circles_red is not None:
-      for circles in circles_red[0]:
-         [x_c,y_c,r]=circles
-         bottom=rectangle_per(hsvimage,x_c,y_c,r,0)
-         right=rectangle_per(hsvimage,x_c,y_c,r,1)
-         upper=rectangle_per(hsvimage,x_c,y_c,r,2)
-         left=rectangle_per(hsvimage,x_c,y_c,r,3)
-         #print bottom,right,upper,left
-         if bottom > percentile or right > percentile or upper > percentile or left > percentile:
-            cv2.circle(org_image, (x_c, y_c), r, (255, 0, 0), 3)
-            cv2.circle(org_image, (x_c, y_c), 1, (255, 0, 0), 1)
-            cv2.putText(org_image,"red don't go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (0,0,255), 2)
-
-   if circles_green is not None:
-      for circles in circles_green[0]:
-         [x_c,y_c,r]=circles
-         bottom=rectangle_per(hsvimage,x_c,y_c,r,0)
-         right=rectangle_per(hsvimage,x_c,y_c,r,1)
-         upper=rectangle_per(hsvimage,x_c,y_c,r,2)
-         left=rectangle_per(hsvimage,x_c,y_c,r,3)
-         #print bottom,right,upper,left
-         if bottom > percentile or right > percentile or upper > percentile or left > percentile:
-            cv2.circle(org_image, (x_c, y_c), r, (255, 0, 0), 3)
-            cv2.circle(org_image, (x_c, y_c), 1, (255, 0, 0), 1)
-            cv2.putText(org_image,"green go",(int(x_c+10),int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 0, 0), 2)  
-
+   circles_red,circles_green=process_frame_filter(org_image)
+   org_image=draw_circles(circles_red,circles_green,org_image,0,0)  
 
    cir_pos,color,radi=finaldata(circles_red,circles_green,0,0)
+   
    frame_time=time.time()-start_frame
    out_str=str(frame_no)+";"+str(frame_time)+";\""+str(radi)+"\";\""+str(cir_pos)+"\";\""+str(color)+"\"\n"
    g.write(out_str)
+
    out.write(org_image)
    frame_no +=1
    

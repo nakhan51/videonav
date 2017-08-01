@@ -23,13 +23,8 @@ while(cap.isOpened()):
     if ret == False:
             break
 
-    #(h,w)=org_image.shape[:2]
     crop_image=org_image[0:frame_height/2, 0:frame_width/2]
-    #cv2.imshow("cropimage",crop_image)
-    #cv2.waitKey(0)
-    #Write the frame into the file 'output.avi'
 
-    #out.write(org_image)
     out.write(crop_image)
 
     if cv2.waitKey(25) & 0xFF == ord('q'):#Press Q on keyboard to  exit
@@ -41,17 +36,4 @@ out.release()
 #Closes all the frames
 cv2.destroyAllWindows()
 
-
-# image=cv2.imread("frame181.jpg")
-# cv2.imshow("org_image", image)
-# cv2.waitKey(0)
-
-# print image.shape
-# (h,w)=image.shape[:2]
-# print h, w 
-# crop_image=image[0:h/2, 0:w/2]
-# cv2.imshow("cropped",crop_image)
-# cv2.waitKey(0)
-# (h1,w1)=crop_image.shape[:2]
-# print h1, w1 
 
