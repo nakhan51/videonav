@@ -38,7 +38,7 @@ while(cap.isOpened()):
     frame=cv2.flip(frame,-1)
     writer.writerow( (count,timestamp) )
     count +=1
-    timestamp +=(34.04)
+    timestamp +=(33.68)
 
     out.write(frame)
    

@@ -74,33 +74,12 @@ def draw_circles(circles_red,circles_green,org_image,shiftx,shifty):
 
 # load the image
 
-org_image = cv2.imread('/home/nishat/opencv_test/sensor_video/frame/frame0.jpg')
-start=time.time()
-y1=180
-x1=286
-x2=486
-y2=380
-img1=org_image[y1:y2,x1:x2]
-img2=org_image[y1-50:y2+50,x1-50:x2+50]
+org_image = cv2.imread('plots/frame502.jpg')
 
-#Create the basic black image 
-#mask = np.zeros(org_image.shape, dtype = "uint8")
-
-# Draw a white, filled rectangle on the mask image
-#cv2.rectangle(mask, (x1, y1), (x2, y2), (255, 255, 255), -1)
-
-#maskimg = cv2.bitwise_and(org_image, mask)
-#circles_red, circles_green = process_frame(maskimg)
-
-img=cv2.subtract(img1,img2)
-
-circles_red, circles_green = process_frame(img)
+circles_red, circles_green = process_frame(org_image)
 
 if(circles_red is not None or circles_green is not None):
    org_image=draw_circles(circles_red,circles_green,org_image,0,0)
-frametime=time.time()-start
-# show the images
-print frametime
 
 cv2.imshow("Detected red circles on the input image", org_image)
 cv2.waitKey(0)

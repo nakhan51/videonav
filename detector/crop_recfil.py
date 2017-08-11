@@ -6,16 +6,18 @@ import time
 
 RECTANGLE_INIT_SIZE=120
 SCAN_INCREMENT_WIDTH=100
-SCAN_INCREMENT_HEIGHT=150
+SCAN_INCREMENT_HEIGHT=120
+REC_INC_WIDTH=5
+REC_INC_HEIGHT=5
 MAX_HEIGHT=100
 MAX_WIDTH=100
 HISTORY_SIZE=10
-FACTOR=3
+FACTOR=2
 REC_AREA=1920*1080
-SINGLE_LGT_RIGHT=400
-SINGLE_LGT_LEFT=300
+SINGLE_LGT_RIGHT=300
+SINGLE_LGT_LEFT=200
 
-blackrange=65
+blackrange=70
 percentile=70
 
 def readfile(new_file):
@@ -63,16 +65,25 @@ def drawrectangle(x1,y1,pitch_data,azimuth_data,w,h):
    refp,minip,maxip,diffp=pitch_data
    refa,minia,maxia,diffa=azimuth_data
    dena= refa-minia
-   if dena  <= 0:
+   numa=refa-maxia
+   denp=refp-minip
+   nump=maxip-refp
+   if dena  == 0:
       dena =1
+   if numa == 0:
+      numa=1
+   if denp  == 0:
+      dena =1
+   if nump == 0:
+      numa=1
    
    if diffp > 0:
-      y1n= y1+((0-y1)/(maxip-refp))*diffp
+      y1n= y1+((0-y1)/(nump))*diffp
    else:
-      y1n=y1+((y1-frame_height)/(refp-minip))*diffp
+      y1n=y1+((y1-frame_height)/(denp))*diffp
 
    if diffa <= 0:
-      x1n=x1+((x1-0)/(refa-maxia))*diffa
+      x1n=x1+((x1-0)/(numa))*diffa
    else:   
       x1n=x1+((x1-frame_width)/(dena))*diffa
 
@@ -158,10 +169,10 @@ def update_reference(circles_red, circles_green, frame_no):
       if len_red == 1 or len_green == 1:
          if x1<=400:
             x1=max(50,x1-SINGLE_LGT_LEFT)
-            x2=min(x2+SINGLE_LGT_RIGHT,800)
+            x2=min(x2+SINGLE_LGT_RIGHT,1900)
          if x1>400:
             x1=max(50,x1-SINGLE_LGT_RIGHT)
-            x2=min(x2+SINGLE_LGT_LEFT,800)
+            x2=min(x2+SINGLE_LGT_LEFT,1900)
          w=x2-x1
          
    ref_pitch=pitch[frame_no]
@@ -283,10 +294,16 @@ def finaldata(circles_red,circles_green,shiftx,shifty):
 
    return cir_pos,color
 
+def recarea(x1,y1,x2,y2):
+   width=x2-x1
+   height=y2-y1
+   area=width*height
+
+   return area
 
 ## START OF MAIN FUNCTION
 
-cap = cv2.VideoCapture("sensor_video/text_with_sensor.avi")
+cap = cv2.VideoCapture("sunny_video/output_sunny.avi")
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
@@ -298,9 +315,9 @@ frame_rate=int(round(cap.get(cv2.cv.CV_CAP_PROP_FPS )))
 
 
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter("videos/static_crop_black.avi",fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter("videos/sunny_crop_black.avi",fourcc, frame_rate, (frame_width,frame_height))
 
-new_file= "sensor_video/sync.txt" 
+new_file= "sunny_video/sync.txt" 
 
 pitch,roll,azimuth=readfile(new_file)
 pitch_min=min(pitch)
@@ -310,9 +327,9 @@ azimuth_max=max(azimuth)
 
 
 
-write_file=('data/static_crop_black.txt')
+write_file=('data/sunny_crop_black.txt')
 g = open(write_file, "wt")
-header="frameno"+";"+"frametime"+";"+"recpoint"+";"+"cir_pos"+";"+"color\n"
+header="frameno"+";"+"frametime"+";"+"recarea"+";"+"cir_pos"+";"+"color\n"
 g.write(header)
 
 
@@ -328,7 +345,9 @@ while(cap.isOpened()):
    if ret==False:
       break
 
-   newrec=[]
+   newrec=-1
+   circ_pos=[]
+   color=[]
    start_frame=time.time()
    
    if(is_first_frame):
@@ -339,6 +358,7 @@ while(cap.isOpened()):
          org_image=draw_circles(circles_red,circles_green,org_image,0,0)
          cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
          circ_pos,color=finaldata(circles_red,circles_green,0,0)
+         newrec=recarea(0,0,1920,1080)
          is_first_frame=False
 
    else:
@@ -347,47 +367,71 @@ while(cap.isOpened()):
       pitch_data=[ref_pitch,pitch_min,pitch_max,diff_pitch]
       azimuth_data=[ref_azimuth,azimuth_min,azimuth_max,diff_azimuth]
       x1_n,x2_n,y1_n,y2_n=drawrectangle(x1,y1,pitch_data,azimuth_data,w,h)
-      newrec=[x1_n,y1_n,x2_n,y2_n]
+      
       i=0
+      rec=3
       while True:
          img=org_image[y1_n:y2_n,x1_n:x2_n]
+         
          circles_red,circles_green=process_frame_filter(img)
-         #print frame_no,circles_green, circles_red,newrec
+         
          if(circles_red is None and circles_green is None): # no cicles currently, so we need to search larger area
-            if i>1:
-               x1_n=int(max(0,x1_n-SCAN_INCREMENT_WIDTH*FACTOR))
-               y1_n=int(max(0,y1_n-SCAN_INCREMENT_HEIGHT*FACTOR))
-               x2_n=int(min(frame_width, x2_n+SCAN_INCREMENT_WIDTH*FACTOR))
-               y2_n=int(min(frame_height, y2_n+SCAN_INCREMENT_HEIGHT*FACTOR))
+            
+            if (((x2r-x1r)*(y2r-y1r)>=0.9*REC_AREA) or i==2) : 
+               break
+            if i>0:
+               if rec==3:
+                  x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
+                  y1_n=int(max(0,y1r-SCAN_INCREMENT_HEIGHT*FACTOR))
+                  x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
+                  y2_n=int(min(frame_height, y1r+REC_INC_HEIGHT*FACTOR))
+                  newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)               
+               if rec==2:
+                  x1_n=int(max(0,x2r-REC_INC_WIDTH*FACTOR))
+                  y1_n=int(max(0,y1r))
+                  x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
+                  y2_n=int(min(frame_height, y2r))
+                  newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
+                                 
+               if rec==1:
+                  x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
+                  y1_n=int(max(0,y1r))
+                  x2_n=int(min(frame_width, x1r+REC_INC_WIDTH*FACTOR))
+                  y2_n=int(min(frame_height, y2r))
+                  newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
+               if rec==0:
+                  x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
+                  y1_n=int(max(0,y2r-REC_INC_HEIGHT*FACTOR))
+                  x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
+                  y2_n=int(min(frame_height, y2r+SCAN_INCREMENT_HEIGHT*FACTOR))
+                  newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
+                  rec=4
+                  i +=1
+                  x1r=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
+                  y1r=int(max(0,y1r-SCAN_INCREMENT_HEIGHT*FACTOR))
+                  x2r=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
+                  y2r=int(min(frame_height, y2r+SCAN_INCREMENT_HEIGHT*FACTOR))
+               rec-=1
             else:
                x1_n = max(0, x1_n-SCAN_INCREMENT_WIDTH)
                y1_n = max(0, y1_n-SCAN_INCREMENT_HEIGHT)
                x2_n = min(frame_width, x2_n+SCAN_INCREMENT_WIDTH)
                y2_n = min(frame_height, y2_n+SCAN_INCREMENT_HEIGHT)
-            i +=1
-            #print x1_n,y1_n,x2_n,y2_n
+               x1r=x1_n
+               y1r=y1_n
+               x2r=x2_n
+               y2r=y2_n
+               newrec=recarea(x1_n,y1_n,x2_n,y2_n)
+               i +=1
+            
          else: # either red or green is detected            
             cv2.rectangle(org_image,(x1_n,y1_n), (x2_n,y2_n),(255,255,255),3)
             break
-         #if ((x2_n-x1_n)*(y2_n-y1_n)==REC_AREA): 
-           # break
-         if i==3:
-            break
+         
          
       if(circles_red is not None or circles_green is not None):
-         len_red=len_green=0
-         if circles_red is not None:
-            len_red=len(circles_red)
 
-         if circles_green is not None:
-            len_green=len(circles_green)
-
-         max_val=max(len_red, len_green)
-         #circle_count_history.append(max_val)
-            
-         #avg_circle_count=int(math.ceil(sum(circle_count_history[-HISTORY_SIZE:])/float(len(circle_count_history[-HISTORY_SIZE:]))))
-
-         if(i>0 and max_val>=1): # rectangle was increased for search, so need to update reference.
+         if(i>0): # rectangle was increased for search, so need to update reference.
             x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          
          org_image=draw_circles(circles_red,circles_green,org_image,x1_n,y1_n)

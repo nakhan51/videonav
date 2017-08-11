@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python detector/sync.py "sensor_video/frametimestamp.csv" "sensor_video/sensortimestamp.csv" > sensor_video/sync.txt
+python detector/sync.py "sunny_video/frametimestamp.csv" "sunny_video/sensortimestamp.csv" > sunny_video/sync.txt

@@ -4,7 +4,7 @@ import cv2
 import csv
 import time
 
-blackrange=65
+blackrange=70
 percentile=70
 
 def colordetection(hsvimage,flag):
@@ -113,6 +113,7 @@ def rectangle_per(hsvimage,x_c,y_c,r,flag):
          y=0
       
       color=hsvimage[y,x]
+   
       if color[2]<blackrange:
          count +=1
    return (count/float(len(points)))*100
@@ -200,36 +201,47 @@ def process_frame_filter(org_image):
    if circles_red is not None:
       for circles in circles_red[0]:
          [x_c,y_c,r]=circles
+         start_filter=time.time()
          bottom=rectangle_per(hsvimage,x_c,y_c,r,0)
          right=rectangle_per(hsvimage,x_c,y_c,r,1)
          upper=rectangle_per(hsvimage,x_c,y_c,r,2)
          left=rectangle_per(hsvimage,x_c,y_c,r,3)
-         
+         filter_time=time.time()-start_filter
+      
          if bottom > percentile or upper > percentile:
             cir_red.append((x_c,y_c,r))
    if circles_green is not None:
       for circles in circles_green[0]:
          [x_c,y_c,r]=circles
+         start_filter=time.time()
          bottom=rectangle_per(hsvimage,x_c,y_c,r,0)
          right=rectangle_per(hsvimage,x_c,y_c,r,1)
          upper=rectangle_per(hsvimage,x_c,y_c,r,2)
          left=rectangle_per(hsvimage,x_c,y_c,r,3)
-         
+         filter_time=time.time()-start_filter
+      
          if bottom > percentile or upper > percentile:
             cir_green.append((x_c,y_c,r))
             
-   return cir_red, cir_green
+   if len(cir_red)==0 and len(cir_green)==0:
+      filter_time=-1
+   if len(cir_red)==0:
+      cir_red=None
+   if len(cir_green)==0:
+      cir_green=None
+   
+   return cir_red, cir_green,filter_time
 
 
 
-write_file=('data/walk_datanocrop_black.txt')
+write_file=('data/sunny_nocrop_black.txt')
 g = open(write_file, "wt")
-header="frameno"+";"+"frametime"+";"+"radious"+";"+"cir_pos"+";"+"color\n"
+header="frameno"+";"+"frametime"+";"+"filtertime"+";"+"radious"+";"+"cir_pos"+";"+"color\n"
 g.write(header)
 
 
 # Create a VideoCapture object and read from input file
-cap = cv2.VideoCapture('walk_video/output_walk.avi')
+cap = cv2.VideoCapture('sunny_video/output_sunny.avi')
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
@@ -243,7 +255,7 @@ frame_rate=int(round(cap.get(cv2.cv.CV_CAP_PROP_FPS)))
 
 # Define the codec and create VideoWriter object.
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter('videos/walk_nocrp_black.avi',fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter('videos/sunny_nocrp_black.avi',fourcc, frame_rate, (frame_width,frame_height))
 
 
 frame_no=0
@@ -253,15 +265,15 @@ while(cap.isOpened()):
    ret, org_image = cap.read()
    if ret == False:
       break
-
+   
    start_frame=time.time()
-   circles_red,circles_green=process_frame_filter(org_image)
+   circles_red,circles_green,filter_time=process_frame_filter(org_image)
    org_image=draw_circles(circles_red,circles_green,org_image,0,0)  
 
    cir_pos,color,radi=finaldata(circles_red,circles_green,0,0)
    
    frame_time=time.time()-start_frame
-   out_str=str(frame_no)+";"+str(frame_time)+";\""+str(radi)+"\";\""+str(cir_pos)+"\";\""+str(color)+"\"\n"
+   out_str=str(frame_no)+";"+str(frame_time)+";"+str(filter_time)+";\""+str(radi)+"\";\""+str(cir_pos)+"\";\""+str(color)+"\"\n"
    g.write(out_str)
 
    out.write(org_image)

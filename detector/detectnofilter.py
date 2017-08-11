@@ -1,4 +1,3 @@
-
 import numpy as np
 import cv2
 import csv
@@ -55,15 +54,19 @@ def finaldata(circles_red,circles_green):
 def process_frame(org_image):
    image=cv2.medianBlur(org_image,3)
    hsvimage=cv2.cvtColor(image,cv2.COLOR_BGR2HSV);# Convert input image to HSV
-   
+
+   start_clrfil=time.time()
    red_hue_image=colordetection(hsvimage,0)
-   circles_red=detectcircle(red_hue_image)            
-      
    green_hue_image=colordetection(hsvimage,1)
+   clrfil_time=time.time()-start_clrfil
+
+   start_cirdet=time.time()
+   circles_red=detectcircle(red_hue_image)               
    circles_green=detectcircle(green_hue_image)
+   cirdet_time=time.time()-start_cirdet
 
 
-   return circles_red, circles_green
+   return circles_red, circles_green,clrfil_time,cirdet_time
 
 def draw_circles(circles_red,circles_green,org_image,shiftx,shifty):
    if circles_red is not None:
@@ -87,14 +90,14 @@ def draw_circles(circles_red,circles_green,org_image,shiftx,shifty):
    return org_image
 
 
-write_file=('data/walk_nocrop_nofilter.txt')
+write_file=('data/sunny_nocrop_nofilter.txt')
 g = open(write_file, "wt")
-header="frameno"+";"+"frametime"+";"+"radious"+";"+"cir_pos"+";"+"color\n"
+header="frameno"+";"+"frametime"+";"+"colorfiltertime"+";"+"circledettime"+";"+"radious"+";"+"cir_pos"+";"+"color\n"
 g.write(header)
 
 
 # Create a VideoCapture object and read from input file
-cap = cv2.VideoCapture('walk_video/output_walk.avi')
+cap = cv2.VideoCapture('sunny_video/output_sunny.avi')
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
@@ -108,7 +111,7 @@ frame_rate=int(round(cap.get(cv2.cv.CV_CAP_PROP_FPS)))
 
 # Define the codec and create VideoWriter object.
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter('videos/walk_nocrop_nofilter.avi',fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter('videos/sunny_nocrop_nofilter.avi',fourcc, frame_rate, (frame_width,frame_height))
 
 
 frame_no=0
@@ -120,13 +123,13 @@ while(cap.isOpened()):
       break
 
    start_frame=time.time()
-   circles_red,circles_green=process_frame(org_image)  
+   circles_red,circles_green,clrfil_time,cirdet_time=process_frame(org_image)  
    org_image=draw_circles(circles_red,circles_green,org_image,0,0)
 
    cir_pos,color,radious=finaldata(circles_red,circles_green)
    
    frame_time=time.time()-start_frame
-   out_str=str(frame_no)+";"+str(frame_time)+";\""+str(radious)+"\";\""+str(cir_pos)+"\";\""+str(color)+"\"\n"
+   out_str=str(frame_no)+";"+str(frame_time)+";"+str(clrfil_time)+";"+str(cirdet_time)+";\""+str(radious)+"\";\""+str(cir_pos)+"\";\""+str(color)+"\"\n"
    g.write(out_str)
    
    out.write(org_image)

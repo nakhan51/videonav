@@ -1,5 +1,5 @@
 #!/bin/bash
 
-val=`cat sensor_video/rectime.csv| awk -F ',' 'NR>1 {print $2}'`
+val=`cat sunny_video/rectime.csv| awk -F ',' 'NR>1 {print $2}'`
 echo $val
- python detector/frametimestamp.py $val "sensor_video/video_sensor.mp4" "sensor_video/output_sensor.avi" "sensor_video/frametimestamp.csv"
+ python detector/frametimestamp.py $val "sunny_video/video_sunny.mp4" "sunny_video/output_sunny.avi" "sunny_video/frametimestamp.csv"
