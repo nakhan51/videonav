@@ -59,7 +59,8 @@ set ylabel "CDF"
 
 set output "plots/red.pdf"
 plot \
-'red.txt' u 1:2 
+'plotdata/red.txt' u 1:2,\
+'plotdata/green.txt' u 1:2 
 
 
 
