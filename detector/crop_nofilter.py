@@ -3,23 +3,22 @@ import numpy as np
 import csv
 import math
 import time
+import sys
 
-inputvideo="cloudy_video/output_cloudy.avi"
-outputvideo="videos/cloudy_crop_nofilter_5_2.avi"
-outputfile='data/cloudy_crop_nofilter_5_2.txt'
-inputfile="cloudy_video/sync.txt"
+inputvideo=sys.argv[1]
+outputvideo=sys.argv[2]
+outputfile=sys.argv[3]
+inputfile=sys.argv[4]
 
 
 RECTANGLE_INIT_SIZE=120
-SCAN_INCREMENT_WIDTH=100
-SCAN_INCREMENT_HEIGHT=100
+SCAN_INCREMENT_WIDTH=150
+SCAN_INCREMENT_HEIGHT=150
 REC_OVERLAP=3
-REC_OVERLAP_FIRST=5
 MAX_HEIGHT=100
 MAX_WIDTH=100
 HISTORY_SIZE=10
 FACTOR=3
-FACTOR_FIRST=2
 REC_AREA=1920*1080
 SINGLE_LGT_RIGHT=300
 SINGLE_LGT_LEFT=200
@@ -91,8 +90,17 @@ def drawrectangle(x1,y1,pitch_data,azimuth_data,w,h):
    else:   
       x1n=x1+((x1-frame_width)/(dena))*diffa
 
-   x1n=int(max(0,x1n))
-   y1n=int(max(0,y1n))
+
+   x1n=int(x1n)
+   y1n=int(y1n)
+   if x1n < 0:
+      x1n=int(max(0,x1n))
+   if x1n > frame_width:
+      x1n=int(min(x1n,frame_width))
+   if y1n < 0:
+      y1n=int(max(0,y1n))
+   if y1n > frame_height:
+      y1n=int(min(y2n,frame_height))
    x2n=x1n+w
    y2n=y1n+h
    x2n=int(min(x2n,frame_width))
@@ -234,13 +242,13 @@ def recarea(x1,y1,x2,y2):
 
 
 def recoverlap(x1r,x2r,y1r,y2r,SCAN_INCREMENT_WIDTH,SCAN_INCREMENT_HEIGHT,FACTOR, REC_OVERLAP,rec,newrec):
-   if rec==3:
+   if rec==2:
       x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
       y1_n=int(max(0,y1r-SCAN_INCREMENT_HEIGHT*FACTOR))
       x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
       y2_n=int(min(frame_height, y1r+REC_OVERLAP*FACTOR))
       newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)               
-   if rec==2:
+   if rec==3:
       x1_n=int(max(0,x2r-REC_OVERLAP*FACTOR))
       y1_n=int(max(0,y1r))
       x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
@@ -250,7 +258,7 @@ def recoverlap(x1r,x2r,y1r,y2r,SCAN_INCREMENT_WIDTH,SCAN_INCREMENT_HEIGHT,FACTOR
    if rec==1:
       x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
       y1_n=int(max(0,y1r))
-      x2_n=int(min(frame_width, x2r+REC_OVERLAP*FACTOR))
+      x2_n=int(min(frame_width, x1r+REC_OVERLAP*FACTOR))
       y2_n=int(min(frame_height, y2r))
       newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
    if rec==0:
@@ -296,7 +304,7 @@ frame_no=0
 x1=y1=x2=y2=h=w=ref_pitch=ref_azimuth = None
 
 while(cap.isOpened()):
-   
+   #print "frame", frame_no
    ret, org_image = cap.read()
    if ret==False:
       break

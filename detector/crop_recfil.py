@@ -4,21 +4,24 @@ import csv
 import math
 import time
 
+inputvideo="walk_video/output_walk.avi"
+outputvideo="videos/walk_crop_recfil_2.avi"
+outputfile='data/walk_crop_recfil.txt'
+inputfile="walk_video/sync.txt"
+
 RECTANGLE_INIT_SIZE=120
 SCAN_INCREMENT_WIDTH=100
-SCAN_INCREMENT_HEIGHT=120
-REC_INC_WIDTH=5
-REC_INC_HEIGHT=5
+SCAN_INCREMENT_HEIGHT=100
+REC_OVERLAP=5
 MAX_HEIGHT=100
 MAX_WIDTH=100
-HISTORY_SIZE=10
 FACTOR=2
 REC_AREA=1920*1080
 SINGLE_LGT_RIGHT=300
 SINGLE_LGT_LEFT=200
 
 blackrange=70
-percentile=70
+percentile=75
 
 def readfile(new_file):
    f = open(new_file, "r")
@@ -57,7 +60,8 @@ def colordetection(hsvimage,flag):
       return green_hue_image
 
 def detectcircle(image):
-   circles=cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 1, image.shape[0]/6,np.array([]),200, 15,5,8)
+   circles=cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 1, image.shape[0]/6,np.array([]),200, 15,4,10)
+   print circles
    return circles
 
 
@@ -87,8 +91,16 @@ def drawrectangle(x1,y1,pitch_data,azimuth_data,w,h):
    else:   
       x1n=x1+((x1-frame_width)/(dena))*diffa
 
-   x1n=int(max(0,x1n))
-   y1n=int(max(0,y1n))
+   x1n=int(x1n)
+   y1n=int(y1n)
+   if x1n < 0:
+      x1n=int(max(0,x1n))
+   if x1n > frame_width:
+      x1n=int(min(x1n,frame_width))
+   if y1n < 0:
+      y1n=int(max(0,y1n))
+   if y1n > frame_height:
+      y1n=int(min(y2n,frame_height))
    x2n=x1n+w
    y2n=y1n+h
    x2n=int(min(x2n,frame_width))
@@ -301,9 +313,39 @@ def recarea(x1,y1,x2,y2):
 
    return area
 
+def recoverlap(x1r,x2r,y1r,y2r,SCAN_INCREMENT_WIDTH,SCAN_INCREMENT_HEIGHT,FACTOR, REC_OVERLAP,rec,newrec):
+   if rec==2:
+      x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
+      y1_n=int(max(0,y1r-SCAN_INCREMENT_HEIGHT*FACTOR))
+      x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
+      y2_n=int(min(frame_height, y1r+REC_OVERLAP*FACTOR))
+      newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)               
+   if rec==3:
+      x1_n=int(max(0,x2r-REC_OVERLAP*FACTOR))
+      y1_n=int(max(0,y1r))
+      x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
+      y2_n=int(min(frame_height, y2r))
+      newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
+                                 
+   if rec==1:
+      x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
+      y1_n=int(max(0,y1r))
+      x2_n=int(min(frame_width, x1r+REC_OVERLAP*FACTOR))
+      y2_n=int(min(frame_height, y2r))
+      newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
+   if rec==0:
+      x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
+      y1_n=int(max(0,y2r-REC_OVERLAP*FACTOR))
+      x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
+      y2_n=int(min(frame_height, y2r+SCAN_INCREMENT_HEIGHT*FACTOR))
+      newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
+
+   return x1_n,x2_n,y1_n,y2_n,newrec
+
+
 ## START OF MAIN FUNCTION
 
-cap = cv2.VideoCapture("sunny_video/output_sunny.avi")
+cap = cv2.VideoCapture(inputvideo)
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
@@ -315,9 +357,9 @@ frame_rate=int(round(cap.get(cv2.cv.CV_CAP_PROP_FPS )))
 
 
 fourcc = cv2.cv.CV_FOURCC('M','J','P','G')
-out = cv2.VideoWriter("videos/sunny_crop_black.avi",fourcc, frame_rate, (frame_width,frame_height))
+out = cv2.VideoWriter(outputvideo,fourcc, frame_rate, (frame_width,frame_height))
 
-new_file= "sunny_video/sync.txt" 
+new_file= inputfile
 
 pitch,roll,azimuth=readfile(new_file)
 pitch_min=min(pitch)
@@ -327,7 +369,7 @@ azimuth_max=max(azimuth)
 
 
 
-write_file=('data/sunny_crop_black.txt')
+write_file=(outputfile)
 g = open(write_file, "wt")
 header="frameno"+";"+"frametime"+";"+"recarea"+";"+"cir_pos"+";"+"color\n"
 g.write(header)
@@ -336,8 +378,6 @@ g.write(header)
 is_first_frame=True
 frame_no=0
 x1=y1=x2=y2=h=w=ref_pitch=ref_azimuth = None
-
-circle_count_history=[]
 
 while(cap.isOpened()):
    
@@ -352,13 +392,13 @@ while(cap.isOpened()):
    
    if(is_first_frame):
       circles_red, circles_green = process_frame_filter(org_image)
+      newrec=recarea(0,0,1920,1080)
       #print circles_red,circles_green
       if(circles_red is not None or circles_green is not None):
          x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          org_image=draw_circles(circles_red,circles_green,org_image,0,0)
          cv2.rectangle(org_image,(x1,y1), (x2,y2),(255,255,255),3)
          circ_pos,color=finaldata(circles_red,circles_green,0,0)
-         newrec=recarea(0,0,1920,1080)
          is_first_frame=False
 
    else:
@@ -367,8 +407,14 @@ while(cap.isOpened()):
       pitch_data=[ref_pitch,pitch_min,pitch_max,diff_pitch]
       azimuth_data=[ref_azimuth,azimuth_min,azimuth_max,diff_azimuth]
       x1_n,x2_n,y1_n,y2_n=drawrectangle(x1,y1,pitch_data,azimuth_data,w,h)
+      x1r=x1_n
+      y1r=y1_n
+      x2r=x2_n
+      y2r=y2_n
+      newrec=recarea(x1_n,y1_n,x2_n,y2_n)
       
       i=0
+      inside=0
       rec=3
       while True:
          img=org_image[y1_n:y2_n,x1_n:x2_n]
@@ -379,32 +425,10 @@ while(cap.isOpened()):
             
             if (((x2r-x1r)*(y2r-y1r)>=0.9*REC_AREA) or i==2) : 
                break
-            if i>0:
-               if rec==3:
-                  x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
-                  y1_n=int(max(0,y1r-SCAN_INCREMENT_HEIGHT*FACTOR))
-                  x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
-                  y2_n=int(min(frame_height, y1r+REC_INC_HEIGHT*FACTOR))
-                  newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)               
-               if rec==2:
-                  x1_n=int(max(0,x2r-REC_INC_WIDTH*FACTOR))
-                  y1_n=int(max(0,y1r))
-                  x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
-                  y2_n=int(min(frame_height, y2r))
-                  newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
-                                 
-               if rec==1:
-                  x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
-                  y1_n=int(max(0,y1r))
-                  x2_n=int(min(frame_width, x1r+REC_INC_WIDTH*FACTOR))
-                  y2_n=int(min(frame_height, y2r))
-                  newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
-               if rec==0:
-                  x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
-                  y1_n=int(max(0,y2r-REC_INC_HEIGHT*FACTOR))
-                  x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
-                  y2_n=int(min(frame_height, y2r+SCAN_INCREMENT_HEIGHT*FACTOR))
-                  newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
+            if inside >0:
+               inside +=1
+               x1_n,x2_n,y1_n,y2_n,newrec=recoverlap(x1r,x2r,y1r,y2r,SCAN_INCREMENT_WIDTH,SCAN_INCREMENT_HEIGHT,FACTOR, REC_OVERLAP,rec,newrec)
+               if rec == 0:
                   rec=4
                   i +=1
                   x1r=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
@@ -413,17 +437,15 @@ while(cap.isOpened()):
                   y2r=int(min(frame_height, y2r+SCAN_INCREMENT_HEIGHT*FACTOR))
                rec-=1
             else:
-               x1_n = max(0, x1_n-SCAN_INCREMENT_WIDTH)
-               y1_n = max(0, y1_n-SCAN_INCREMENT_HEIGHT)
-               x2_n = min(frame_width, x2_n+SCAN_INCREMENT_WIDTH)
-               y2_n = min(frame_height, y2_n+SCAN_INCREMENT_HEIGHT)
+               x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
+               y1_n=int(max(0,y1r-SCAN_INCREMENT_HEIGHT*FACTOR))
+               x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
+               y2_n=int(min(frame_height, y2r+SCAN_INCREMENT_HEIGHT*FACTOR))
+               inside +=1
                x1r=x1_n
                y1r=y1_n
                x2r=x2_n
                y2r=y2_n
-               newrec=recarea(x1_n,y1_n,x2_n,y2_n)
-               i +=1
-            
          else: # either red or green is detected            
             cv2.rectangle(org_image,(x1_n,y1_n), (x2_n,y2_n),(255,255,255),3)
             break
@@ -431,7 +453,7 @@ while(cap.isOpened()):
          
       if(circles_red is not None or circles_green is not None):
 
-         if(i>0): # rectangle was increased for search, so need to update reference.
+         if(inside>0): # rectangle was increased for search, so need to update reference.
             x1, y1, x2, y2, h, w, ref_pitch, ref_azimuth = update_reference(circles_red, circles_green, frame_no)
          
          org_image=draw_circles(circles_red,circles_green,org_image,x1_n,y1_n)
