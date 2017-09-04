@@ -9,8 +9,8 @@ outputvideo=sys.argv[2]
 outputfile=sys.argv[3]
 #inputfile="walk_video/sync.txt"
 
-blackrange=70
-percentile=65
+blackrange=65
+percentile=70
 
 def colordetection(hsvimage,flag):
    if flag==0:
@@ -33,7 +33,7 @@ def colordetection(hsvimage,flag):
       return green_hue_image
 
 def detectcircle(image):
-   circles=cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 1, image.shape[0]/6,np.array([]),200, 15,5,10)
+   circles=cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 1, image.shape[0]/6,np.array([]),200, 15,5,8)
    return circles
 
 def midpointcircledraw(x_c,y_c,r):

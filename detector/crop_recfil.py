@@ -3,25 +3,26 @@ import numpy as np
 import csv
 import math
 import time
+import sys
 
-inputvideo="walk_video/output_walk.avi"
-outputvideo="videos/walk_crop_recfil_2.avi"
-outputfile='data/walk_crop_recfil.txt'
-inputfile="walk_video/sync.txt"
+inputvideo=sys.argv[1]
+outputvideo=sys.argv[2]
+outputfile=sys.argv[3]
+inputfile=sys.argv[4]
 
 RECTANGLE_INIT_SIZE=120
 SCAN_INCREMENT_WIDTH=100
-SCAN_INCREMENT_HEIGHT=100
-REC_OVERLAP=5
+SCAN_INCREMENT_HEIGHT=120
+REC_OVERLAP=3
 MAX_HEIGHT=100
 MAX_WIDTH=100
-FACTOR=2
+FACTOR=3
 REC_AREA=1920*1080
 SINGLE_LGT_RIGHT=300
 SINGLE_LGT_LEFT=200
 
-blackrange=70
-percentile=75
+blackrange=65
+percentile=70
 
 def readfile(new_file):
    f = open(new_file, "r")
@@ -60,8 +61,7 @@ def colordetection(hsvimage,flag):
       return green_hue_image
 
 def detectcircle(image):
-   circles=cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 1, image.shape[0]/6,np.array([]),200, 15,4,10)
-   print circles
+   circles=cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 1, image.shape[0]/6,np.array([]),200, 12,5,10)
    return circles
 
 
@@ -126,18 +126,20 @@ def draw_circles(circles_red,circles_green,org_image,shiftx,shifty):
          [x_c,y_c,r]=circles
          x_c=int(x_c+shiftx)
          y_c=int(y_c+shifty)
-         cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
-         cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
-         cv2.putText(org_image,"red don't go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
+         r = int(r)
+         cv2.circle(org_image, (x_c,y_c),(r+1), (255, 255, 255), 2)
+         #cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
+         cv2.putText(org_image,"Red-don't go",(int(x_c-10), int(y_c-10)),cv2.FONT_HERSHEY_SIMPLEX,1, (0, 0, 255), 2)
 
    if circles_green is not None:
       for circles in circles_green:
          [x_c,y_c,r]=circles
          x_c=int(x_c+shiftx)
          y_c=int(y_c+shifty)
-         cv2.circle(org_image, (x_c,y_c),r, (255, 0, 0), 3)
-         cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
-         cv2.putText(org_image,"green  go",(int(x_c+10), int(y_c+10)),cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 0, 0), 2)
+         r=int(r)
+         cv2.circle(org_image, (x_c,y_c),(r+1), (255, 255, 255), 2)
+         #cv2.circle(org_image, (x_c, y_c), 0, (255, 0, 0), 3)
+         cv2.putText(org_image,"Green-go",(int(x_c-10), int(y_c-10)),cv2.FONT_HERSHEY_SIMPLEX,1, (255, 0, 0), 2)
 
    return org_image
 
@@ -262,7 +264,7 @@ def process_frame_filter(org_image):
          upper=rectangle_per(hsvimage,x_c,y_c,r,2)
          left=rectangle_per(hsvimage,x_c,y_c,r,3)
          
-         if bottom > percentile or upper > percentile:
+         if bottom >= percentile or upper >= percentile:
             cir_red.append((x_c,y_c,r))
             
    if circles_green is not None:
@@ -273,7 +275,7 @@ def process_frame_filter(org_image):
          upper=rectangle_per(hsvimage,x_c,y_c,r,2)
          left=rectangle_per(hsvimage,x_c,y_c,r,3)
          
-         if bottom > percentile or upper > percentile:
+         if bottom >= percentile or upper >= percentile:
             cir_green.append((x_c,y_c,r))
    if len(cir_red)==0:
       cir_red=None
@@ -313,34 +315,6 @@ def recarea(x1,y1,x2,y2):
 
    return area
 
-def recoverlap(x1r,x2r,y1r,y2r,SCAN_INCREMENT_WIDTH,SCAN_INCREMENT_HEIGHT,FACTOR, REC_OVERLAP,rec,newrec):
-   if rec==2:
-      x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
-      y1_n=int(max(0,y1r-SCAN_INCREMENT_HEIGHT*FACTOR))
-      x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
-      y2_n=int(min(frame_height, y1r+REC_OVERLAP*FACTOR))
-      newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)               
-   if rec==3:
-      x1_n=int(max(0,x2r-REC_OVERLAP*FACTOR))
-      y1_n=int(max(0,y1r))
-      x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
-      y2_n=int(min(frame_height, y2r))
-      newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
-                                 
-   if rec==1:
-      x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
-      y1_n=int(max(0,y1r))
-      x2_n=int(min(frame_width, x1r+REC_OVERLAP*FACTOR))
-      y2_n=int(min(frame_height, y2r))
-      newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
-   if rec==0:
-      x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
-      y1_n=int(max(0,y2r-REC_OVERLAP*FACTOR))
-      x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
-      y2_n=int(min(frame_height, y2r+SCAN_INCREMENT_HEIGHT*FACTOR))
-      newrec= newrec+ recarea(x1_n,y1_n,x2_n,y2_n)
-
-   return x1_n,x2_n,y1_n,y2_n,newrec
 
 
 ## START OF MAIN FUNCTION
@@ -407,10 +381,6 @@ while(cap.isOpened()):
       pitch_data=[ref_pitch,pitch_min,pitch_max,diff_pitch]
       azimuth_data=[ref_azimuth,azimuth_min,azimuth_max,diff_azimuth]
       x1_n,x2_n,y1_n,y2_n=drawrectangle(x1,y1,pitch_data,azimuth_data,w,h)
-      x1r=x1_n
-      y1r=y1_n
-      x2r=x2_n
-      y2r=y2_n
       newrec=recarea(x1_n,y1_n,x2_n,y2_n)
       
       i=0
@@ -421,31 +391,24 @@ while(cap.isOpened()):
          
          circles_red,circles_green=process_frame_filter(img)
          
-         if(circles_red is None and circles_green is None): # no cicles currently, so we need to search larger area
-            
-            if (((x2r-x1r)*(y2r-y1r)>=0.9*REC_AREA) or i==2) : 
+         if(circles_red is None and circles_green is None): # no cicles currently, so we need to search larger area            
+            if (((x2_n-x1_n)*(y2_n-y1_n)>=0.9*REC_AREA) or i==2) : 
                break
-            if inside >0:
-               inside +=1
-               x1_n,x2_n,y1_n,y2_n,newrec=recoverlap(x1r,x2r,y1r,y2r,SCAN_INCREMENT_WIDTH,SCAN_INCREMENT_HEIGHT,FACTOR, REC_OVERLAP,rec,newrec)
-               if rec == 0:
-                  rec=4
-                  i +=1
-                  x1r=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
-                  y1r=int(max(0,y1r-SCAN_INCREMENT_HEIGHT*FACTOR))
-                  x2r=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
-                  y2r=int(min(frame_height, y2r+SCAN_INCREMENT_HEIGHT*FACTOR))
-               rec-=1
+            inside +=1
+            if i >0:
+               x1_n=int(max(0,x1_n-SCAN_INCREMENT_WIDTH*FACTOR))
+               y1_n=int(max(0,y1_n-SCAN_INCREMENT_HEIGHT*FACTOR))
+               x2_n=int(min(frame_width, x2_n+SCAN_INCREMENT_WIDTH*FACTOR))
+               y2_n=int(min(frame_height, y2_n+SCAN_INCREMENT_HEIGHT*FACTOR))
+               newrec=newrec+recarea(x1_n,y1_n,x2_n,y2_n)
+               i +=1
             else:
-               x1_n=int(max(0,x1r-SCAN_INCREMENT_WIDTH*FACTOR))
-               y1_n=int(max(0,y1r-SCAN_INCREMENT_HEIGHT*FACTOR))
-               x2_n=int(min(frame_width, x2r+SCAN_INCREMENT_WIDTH*FACTOR))
-               y2_n=int(min(frame_height, y2r+SCAN_INCREMENT_HEIGHT*FACTOR))
-               inside +=1
-               x1r=x1_n
-               y1r=y1_n
-               x2r=x2_n
-               y2r=y2_n
+               x1_n=int(max(0,x1_n-SCAN_INCREMENT_WIDTH))
+               y1_n=int(max(0,y1_n-SCAN_INCREMENT_HEIGHT))
+               x2_n=int(min(frame_width, x2_n+SCAN_INCREMENT_WIDTH))
+               y2_n=int(min(frame_height, y2_n+SCAN_INCREMENT_HEIGHT))
+               i +=1
+               
          else: # either red or green is detected            
             cv2.rectangle(org_image,(x1_n,y1_n), (x2_n,y2_n),(255,255,255),3)
             break
@@ -474,4 +437,3 @@ cap.release()
 g.close()
 out.release()
 cv2.destroyAllWindows()
-

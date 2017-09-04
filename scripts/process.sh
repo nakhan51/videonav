@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# # generate plotdata for computation time for all frames
-cat data/lisanight1.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/lisanight1_cdf.txt
-cat data/lisanight1_crop.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/lisanight1_crop_cdf.txt
+# # generate plotdata for computation time for Lisa 
+#cat data/night2.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/night2_cdf.txt
+#cat data/lisanight1_crop.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/lisanight1_crop_cdf.txt
 
 # plotdata for walkvideos
 
@@ -23,6 +23,18 @@ cat data/lisanight1_crop.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts
 #cat data/sunny_crop_nofilter2.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/sunny_cdf_crop_nofil.txt
 #cat data/sunny_nocrop_black.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/sunny_cdf_nocrop_black.txt
 #cat data/sunny_nocrop_nofilter.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/sunny_cdf_nocrop_nofil.txt
+
+### sensor dataset
+#cat data/sensor_nocrp_nofil.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/sensor_cdf_nocrp_nofil.txt
+#cat data/sensor_nocrp_recfil.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/sensor_cdf_nocrp_recfil.txt
+#cat data/sensor_crp_nofil.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/sensor_cdf_crp_nofil.txt
+#cat data/sensor_crp_recfil.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/sensor_cdf_crp_recfil.txt
+
+## cloudy
+cat data/cloudy_nocrp_nofil.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/cloudy_cdf_nocrp_nofil.txt
+cat data/cloudy_nocrp_recfil.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/cloudy_cdf_nocrp_recfil.txt
+cat data/cloudy_crp_nofil.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/cloudy_cdf_crp_nofil.txt
+cat data/cloudy_crp_recfil.txt | awk -F\; 'NR>1 {print $2*1000}'| sort -n |scripts/cdf.sh > plotdata/cloudy_cdf_crp_recfil.txt
 
 
 ### color filter time
